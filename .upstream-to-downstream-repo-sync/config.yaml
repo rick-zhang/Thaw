@@ -1,0 +1,15 @@
+schema_version: 1
+upstream:
+  url: git@github.com:thaw-app/Thaw.git
+  remote: upstream
+  branch: development
+downstream:
+  url: git@github.com:rick-zhang/Thaw.git
+  remote: origin
+  branch: development
+sync:
+  strategy: merge
+  delivery: local
+  branch_prefix: sync/upstream
+  recovery_prefix: backup/pre-sync
+customizations: customizations.md
