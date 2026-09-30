@@ -7,9 +7,122 @@ The `release.yml` workflow reads the section matching the release tag
 (`## [tag]`) and uses it as the release notes for both the GitHub Release
 and the Sparkle appcast, unless overridden with the `release_notes` input.
 
-## [2.1.0-beta.6] - 2026-09-26
+## [3.0.0-beta.1] - 2026-09-29
 
-**macOS 26 only**
+**macOS 27 only · Build 110 · First beta**
+
+> [!IMPORTANT]
+> **This is the first 3.0.0 beta.**
+>
+> Beta is the default update channel. Nightly gets every build as it lands. Switch in Settings > About.
+
+> [!NOTE]
+> **Missing a fix?**
+>
+> If your issue isn't fixed in this build, comment on it. Thank you to everyone who sent logs, recordings and crash reports.
+
+> [!TIP]
+> **The short version**
+>
+> **What's new**
+> - Thaw Bar Only: a small bar for items macOS won't draw in the menu bar.
+> - New option to show Live Activities and the camera indicator while apps are hidden.
+> - Folders, opening items by letter, and rounded screen corners.
+> - Pick the icon Thaw shows for any item.
+> - One menu for every item, and fewer settings.
+>
+> **What's fixed**
+> - Settings no longer crashes on notched MacBooks, or at 110% zoom.
+> - Passwords' menu bar key can move to Hidden.
+> - "Who arranges items" is now Item arrangement, and says what it does.
+> - Thaw no longer reorders the menu bar around its own icons.
+> - Fast User Switching, AirDrop, Focus and Now Playing stay reachable.
+> - macOS's » button works again on notched MacBooks.
+
+Thanks to your support, Thaw is now part of the Vercel Open Source Program.
+
+[![Vercel OSS Program](https://vercel.com/oss/program-badge-2026.svg)](https://vercel.com/open-source-program)
+
+### New: Thaw Bar Only
+
+For items macOS never draws on macOS 27.
+
+- **Move an item there** with Move to > Thaw Bar Only. Layout suggests it for items macOS isn't drawing.
+- **Open them** from their own menu bar icon, the "Show Thaw Bar Only items" shortcut, or beside Hidden.
+- **Show one in the menu bar** with Show in Menu Bar, for up to six items. Click it again to close its menu.
+- **They stay out of the hidden reveal** unless you turn that on.
+- **Turn it off** in Layout > Items macOS won't show, or in Thaw Bar > Options. Your list comes back when you turn it on again.
+
+### New: folders, letters and corners
+
+- **Folders.** Right-click an item group and choose Show as a Folder. Each folder can have its own icon and color.
+- **Open an item by letter** with a shortcut from Settings > Shortcuts.
+- **Rounded screen corners** in Settings > Appearance.
+
+### New: icons and menus
+
+- **Thaw uses the app's own icon** where it has no picture of an item. Reported by @mrleblanc101 in [#1087](https://github.com/thaw-app/Thaw/issues/1087).
+- **Choose Icon…** picks any image the app ships, or a file of your own. Requested by @Snowman833 in [#912](https://github.com/thaw-app/Thaw/issues/912).
+- **One menu for every item** in Layout, search and the Thaw Bar.
+
+### New: show Live Activities and the camera indicator
+
+- **A new option in Settings > General** keeps Live Activities and the camera and microphone indicators on the menu bar while apps are hidden, and stops hidden items from flashing when Notification Center opens.
+- **It's in beta and off by default.** Thaw offers it once at launch and asks for access to one file.
+
+### Apple's items Thaw can't hide
+
+Switches in Settings > Experiments swap these for Thaw icons you can move or hide.
+
+- **New: Replace Input Menu**, with your keyboard layouts.
+- **Fast User Switching, AirDrop, Focus and Now Playing are replaced wherever they sit.** Reported by @joaofrgomes in [#1196](https://github.com/thaw-app/Thaw/issues/1196).
+- **Replacement icons look right** and survive a relaunch.
+
+### Settings
+
+- **Update channels.** Choose Beta or Nightly in Settings > About.
+- **An update's notes open in What's New** before you install.
+- **Item arrangement** says what Automatic and Manual do. Reported by @KyNorthstar in [#1212](https://github.com/thaw-app/Thaw/issues/1212).
+- **Dashed and dotted borders** in Appearance.
+- **Fewer settings.** Anything you changed still applies.
+- **Tidier pages**, buttons and sidebar.
+
+### Fixed
+
+- **Settings no longer crashes** on notched MacBooks or at 110% zoom. Reported by @ifangxiang and @NickBenthem in [#1194](https://github.com/thaw-app/Thaw/issues/1194).
+- **Thaw no longer reorders the menu bar around its own icons.**
+- **Hidden items open reliably**, and open in the Thaw Bar when the menu bar is full. Reported by @Kodiak-01 in [#1115](https://github.com/thaw-app/Thaw/issues/1115).
+- **macOS's » button works** on notched MacBooks. Reported by @joaofrgomes in [#1195](https://github.com/thaw-app/Thaw/issues/1195).
+- **Passwords' menu bar key can move to Hidden.** [#1205](https://github.com/thaw-app/Thaw/issues/1205)
+- **Siri stays put** when you move other items.
+- **An app's items stay together**, and Layout says when one is hidden with its app.
+- **Items hidden beside the notch come back** on a wider display. Reported by @shaneoreilly in [#1106](https://github.com/thaw-app/Thaw/issues/1106).
+- **Wide items keep their picture.** Reported by @thomast8 in [#1204](https://github.com/thaw-app/Thaw/issues/1204).
+- **Item pictures survive a relaunch** and no longer pick up specks from busy wallpapers.
+- **Other apps stay in the background** while Settings is open. Reported by @joaofrgomes in [#1197](https://github.com/thaw-app/Thaw/issues/1197).
+- **Clicks near the clock in full-screen apps** no longer open Notification Center. Reported by @apaeffgen in [#1191](https://github.com/thaw-app/Thaw/issues/1191).
+- **Thaw is faster**: the accessibility helper starts, and swaps and reveals do less work.
+
+### Still under investigation
+
+- **Thaw may not stay the frontmost app.** Tell us if it still happens. [#1167](https://github.com/thaw-app/Thaw/issues/1167)
+- **Uneven gaps after a spacing change.** [#1126](https://github.com/thaw-app/Thaw/issues/1126)
+- **Webcam and microphone controls can be hard to reach.** [#1174](https://github.com/thaw-app/Thaw/issues/1174)
+- **Item positions with a right-to-left language.** [#1063](https://github.com/thaw-app/Thaw/issues/1063)
+
+### Thank you
+
+- @KyNorthstar, the Item arrangement wording ([#1212](https://github.com/thaw-app/Thaw/issues/1212))
+- @ifangxiang and @NickBenthem, the Settings crash ([#1194](https://github.com/thaw-app/Thaw/issues/1194))
+- @joaofrgomes, the » button, Typeface and Fast User Switching ([#1195](https://github.com/thaw-app/Thaw/issues/1195), [#1196](https://github.com/thaw-app/Thaw/issues/1196), [#1197](https://github.com/thaw-app/Thaw/issues/1197))
+- @shaneoreilly, @Kodiak-01 and @thomast8, hidden and wide items ([#1106](https://github.com/thaw-app/Thaw/issues/1106), [#1115](https://github.com/thaw-app/Thaw/issues/1115), [#1204](https://github.com/thaw-app/Thaw/issues/1204))
+- @mrleblanc101 and @Snowman833, item icons ([#1087](https://github.com/thaw-app/Thaw/issues/1087), [#912](https://github.com/thaw-app/Thaw/issues/912))
+- @apaeffgen, Notification Center ([#1191](https://github.com/thaw-app/Thaw/issues/1191))
+- lyly and influx on Discord, missing items and live wallpapers
+
+## [2.1.0-beta.6] - 2026-09-29
+
+**macOS 26 only · Build 62**
 
 Thaw stops rearranging your menu bar in a loop, drops into Always Hidden stay put, and macOS 27 users are pointed at the right update channel.
 
