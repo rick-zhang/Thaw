@@ -13,6 +13,13 @@ import os.lock
 nonisolated struct MenuBarItem: CustomStringConvertible {
     let tag: MenuBarItemTag
 
+    /// AX 项目使用 kCGNullWindowID，并通过独立后端操作。
+    var accessibilityItem: AccessibilityMenuBarBackend.Item? = nil
+
+    var presentationID: String {
+        accessibilityItem.map { "ax:\($0.id)" } ?? "window:\(windowID)"
+    }
+
     let windowID: CGWindowID
 
     /// The identifier of the process that owns the item.
@@ -31,7 +38,8 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
 
     /// Read from the window server, falling back to the snapshot.
     var liveBounds: CGRect {
-        Bridging.getWindowBounds(for: windowID) ?? bounds
+        if accessibilityItem != nil { return bounds }
+        return Bridging.getWindowBounds(for: windowID) ?? bounds
     }
 
     /// The gate that refuses to move an item, named so refusals can be
@@ -67,6 +75,9 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// Pure, never reads defaults. See also
     /// ``isMovableAddressingWindowOwner``.
     var immovabilityReason: ImmovabilityReason? {
+        if let accessibilityItem, accessibilityItem.host.bundleID?.hasPrefix("com.apple.") != false {
+            return .prohibitedSystemItem
+        }
         if !tag.isMovable {
             return .prohibitedSystemItem
         }
@@ -247,6 +258,10 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     var displayName: String {
         if let custom = customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
             return custom
+        }
+
+        if let ax = accessibilityItem, ax.host.bundleID == "com.apple.MenuBarAgent" {
+            return ax.title
         }
 
         // Spacers carry their autosave name as the window title.

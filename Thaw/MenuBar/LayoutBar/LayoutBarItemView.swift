@@ -19,7 +19,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         static let minWidth: CGFloat = 14
         static let maxWidth: CGFloat = 240
         static let minHeight: CGFloat = 18
-        static let placeholderCornerRadius: CGFloat = 6
         static let placeholderHorizontalInset: CGFloat = 2
         static let placeholderVerticalInset: CGFloat = 2
         static let iconInset: CGFloat = 2
@@ -156,7 +155,76 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             displayBounds: NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         )
 
+        if item.accessibilityItem != nil {
+            setAccessibilityElement(true)
+            setAccessibilityRole(.button)
+            setAccessibilityLabel(item.displayName)
+            if item.isMovable {
+                setAccessibilityCustomActions([
+                    NSAccessibilityCustomAction(name: String(localized: "向左移动"), target: self, selector: #selector(stepAccessibilityItemLeft)),
+                    NSAccessibilityCustomAction(name: String(localized: "向右移动"), target: self, selector: #selector(stepAccessibilityItemRight)),
+                    NSAccessibilityCustomAction(name: "移至显示区域", target: self, selector: #selector(moveAccessibilityItemToVisible)),
+                    NSAccessibilityCustomAction(name: "移至隐藏区域", target: self, selector: #selector(moveAccessibilityItemToHidden)),
+                    NSAccessibilityCustomAction(name: "移至永久隐藏区域", target: self, selector: #selector(moveAccessibilityItemToAlwaysHidden)),
+                ])
+            }
+        }
         configureCancellables()
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard item.accessibilityItem != nil, item.isMovable else { return super.menu(for: event) }
+        let menu = NSMenu()
+        let entries: [(String, Selector)] = [
+            (String(localized: "向左移动"), #selector(stepAccessibilityItemLeft)),
+            (String(localized: "向右移动"), #selector(stepAccessibilityItemRight)),
+            (String(localized: "移至显示区域"), #selector(moveAccessibilityItemToVisible)),
+            (String(localized: "移至隐藏区域"), #selector(moveAccessibilityItemToHidden))
+        ]
+        for (title, action) in entries {
+            menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self
+        }
+        if appState?.settings.advanced.enableAlwaysHiddenSection == true {
+            menu.addItem(withTitle: String(localized: "移至永久隐藏区域"),
+                         action: #selector(moveAccessibilityItemToAlwaysHidden), keyEquivalent: "").target = self
+        }
+        return menu
+    }
+
+    @objc private func stepAccessibilityItemLeft() -> Bool {
+        appState?.itemManager.stepAccessibilityItem(item, offset: -1)
+        return true
+    }
+
+    @objc private func stepAccessibilityItemRight() -> Bool {
+        appState?.itemManager.stepAccessibilityItem(item, offset: 1)
+        return true
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard item.accessibilityItem != nil else { return super.accessibilityPerformPress() }
+        activateRepresentedItem()
+        return true
+    }
+
+    // 与鼠标拖放共用分区逻辑，供 VoiceOver 的自定义操作使用。
+    @objc private func moveAccessibilityItemToVisible() -> Bool {
+        moveAccessibilityItem(to: .visible)
+    }
+
+    @objc private func moveAccessibilityItemToHidden() -> Bool {
+        moveAccessibilityItem(to: .hidden)
+    }
+
+    @objc private func moveAccessibilityItemToAlwaysHidden() -> Bool {
+        guard appState?.settings.advanced.enableAlwaysHiddenSection == true else { return false }
+        return moveAccessibilityItem(to: .alwaysHidden)
+    }
+
+    private func moveAccessibilityItem(to section: MenuBarSection.Name) -> Bool {
+        guard let manager = appState?.itemManager, !manager.accessibilityAssignmentInFlight else { return false }
+        manager.assignAccessibilityItem(item, to: section)
+        return true
     }
 
     @available(*, unavailable)
@@ -597,18 +665,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             dx: Metrics.placeholderHorizontalInset,
             dy: Metrics.placeholderVerticalInset
         )
-        let backgroundPath = NSBezierPath(
-            roundedRect: placeholderRect,
-            xRadius: Metrics.placeholderCornerRadius,
-            yRadius: Metrics.placeholderCornerRadius
-        )
-        NSColor.quaternaryLabelColor.withAlphaComponent(0.35 * fraction).setFill()
-        backgroundPath.fill()
-
-        NSColor.separatorColor.withAlphaComponent(0.6 * fraction).setStroke()
-        backgroundPath.lineWidth = 1
-        backgroundPath.stroke()
-
         guard var placeholderImage else {
             return
         }

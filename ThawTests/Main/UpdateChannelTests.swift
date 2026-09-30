@@ -80,13 +80,13 @@ struct UpdateChannelTests {
         #expect(cases == [.stable, .beta, .alpha])
     }
 
-    /// The alert points at alpha, so a system that sees it must be able to select alpha.
-    @Test("The warning and the alpha gate share a threshold", arguments: [25, 26, 27, 28])
+    /// 显示兼容性警告时必须能选择预览通道；无启动警告不等于关闭预览通道。
+    @Test("兼容性警告不阻断预览通道", arguments: [25, 26, 27, 28])
     func warningAndAlphaGateAgree(majorVersion: Int) {
         let version = Self.version(majorVersion)
         #expect(
-            MacOSCompatibilityWarning.shouldShow(for: version)
-                == UpdateChannel.alpha.isAvailable(on: version)
+            !MacOSCompatibilityWarning.shouldShow(for: version)
+                || UpdateChannel.alpha.isAvailable(on: version)
         )
     }
 

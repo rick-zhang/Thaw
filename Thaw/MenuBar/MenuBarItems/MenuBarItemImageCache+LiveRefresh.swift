@@ -270,6 +270,15 @@ extension MenuBarItemImageCache {
                 continue
             }
 
+            if AccessibilityMenuBarBackend.isRequired {
+                // 没有打开布局页时，图标触发器仍需真实采样。
+                let requested = globalAttentionDetection || !triggerAttentionIdentifiers.isEmpty
+                    ? sections : Array(consumerSections)
+                await updateCacheWithoutChecks(sections: requested, preferredDisplayID: screen.displayID)
+                try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
+                continue
+            }
+
             let scale = screen.backingScaleFactor
             let now = ContinuousClock.now
             var nextWake = now + .seconds(max(interval, Self.minIconRefreshInterval))

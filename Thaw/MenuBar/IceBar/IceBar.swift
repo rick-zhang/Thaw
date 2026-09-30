@@ -604,7 +604,7 @@ private struct IceBarContentView: View {
             case .horizontal:
                 ScrollView(.horizontal) {
                     HStack(spacing: itemSpacing) {
-                        ForEach(items, id: \.windowID) { item in
+                        ForEach(items, id: \.presentationID) { item in
                             IceBarItemView(
                                 imageCache: imageCache,
                                 itemManager: itemManager,
@@ -632,7 +632,7 @@ private struct IceBarContentView: View {
             case .vertical:
                 ScrollView(.vertical) {
                     VStack(spacing: itemSpacing) {
-                        ForEach(items, id: \.windowID) { item in
+                        ForEach(items, id: \.presentationID) { item in
                             IceBarItemView(
                                 imageCache: imageCache,
                                 itemManager: itemManager,
@@ -660,7 +660,7 @@ private struct IceBarContentView: View {
                         let rows = items.chunks(ofCount: gridColumns).map(Array.init)
                         ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
                             HStack(spacing: itemSpacing) {
-                                ForEach(Array(rowItems.enumerated()), id: \.element.windowID) { colIndex, item in
+                                ForEach(Array(rowItems.enumerated()), id: \.element.presentationID) { colIndex, item in
                                     let itemView = IceBarItemView(
                                         imageCache: imageCache,
                                         itemManager: itemManager,
@@ -734,6 +734,11 @@ private struct IceBarItemView: View {
             guard let itemManager, let menuBarManager else {
                 return
             }
+            if item.accessibilityItem != nil {
+                menuBarManager.iceBarPanel.close()
+                Task { await itemManager.activate(item: item, on: displayID) }
+                return
+            }
             let clickStartTime = Date.now
             IceBarItemView.diagLog.debug("leftClick: user clicked \(item.logString)")
             let panel = menuBarManager.iceBarPanel
@@ -763,6 +768,10 @@ private struct IceBarItemView: View {
     private var rightClickAction: () -> Void {
         return { [weak itemManager, weak menuBarManager] in
             guard let itemManager, let menuBarManager else {
+                return
+            }
+            if item.accessibilityItem != nil {
+                itemManager.accessibilityLayoutError = "macOS 27 暂不支持代替其他应用执行右键点击，请在系统菜单栏中右键操作。"
                 return
             }
             let panel = menuBarManager.iceBarPanel

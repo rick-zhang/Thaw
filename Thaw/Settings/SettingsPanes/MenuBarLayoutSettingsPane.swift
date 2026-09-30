@@ -19,7 +19,7 @@ struct MenuBarLayoutSettingsPane: View {
     var body: some View {
         // Arranging needs Accessibility, not Screen Recording. Without capture
         // the bars show app icons, which is enough to drag the right item.
-        if appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
+        if !AccessibilityMenuBarBackend.isRequired, appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults {
             cannotArrange
         } else {
             IceForm {
@@ -55,13 +55,17 @@ struct MenuBarLayoutSettingsPane: View {
                 "Enable the always-hidden section",
                 isOn: $advancedSettings.enableAlwaysHiddenSection
             )
-            sectionDividerStyle
+            sectionDividerStyle.disabled(AccessibilityMenuBarBackend.isRequired)
         }
     }
 
     private var iconPreviewsCard: some View {
         IceSection("Icon previews") {
             iconRefreshInterval
+            if AccessibilityMenuBarBackend.isRequired {
+                Text("菜单栏中可见的图标实时刷新；隐藏的图标保留最后一次预览，展开后更新。")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

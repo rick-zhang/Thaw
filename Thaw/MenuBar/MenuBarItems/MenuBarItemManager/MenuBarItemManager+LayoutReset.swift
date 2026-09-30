@@ -70,6 +70,31 @@ extension MenuBarItemManager {
             throw LayoutResetError.missingAppState
         }
 
+        if AccessibilityMenuBarBackend.isRequired {
+            guard !accessibilityAssignmentInFlight else { throw LayoutResetError.alreadyInProgress }
+            let section: MenuBarSection.Name = switch target {
+            case .visible: .visible
+            case .hidden: .hidden
+            case .alwaysHidden: .alwaysHidden
+            }
+            var assignments = Self.accessibilityResetAssignments(
+                existing: accessibilityAssignments, section: section,
+                ownBundle: Bundle.main.bundleIdentifier
+            )
+            for item in itemCache.managedItems where item.isMovable && item.canBeHidden && !item.isControlItem {
+                guard let bundle = item.accessibilityItem?.host.bundleID,
+                      !bundle.hasPrefix("com.apple."), bundle != Bundle.main.bundleIdentifier else { continue }
+                assignments[bundle] = section.rawValue
+            }
+            guard await commitAccessibilityAssignments(assignments) else { throw EventError.cannotComplete }
+            // 成功后才清理旧布局信息，失败时保留用户配置。
+            prepareLayoutStateForReset()
+            suppressNextNewLeftmostItemRelocation = false
+            appState.menuBarManager.iceBarPanel.close()
+            publishAccessibilityItems()
+            return 0
+        }
+
         var items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
 
         let hiddenWID: CGWindowID? = appState.menuBarManager
@@ -139,6 +164,15 @@ extension MenuBarItemManager {
             items: items,
             target: target
         )
+    }
+
+    /// 重置也覆盖暂未运行的已分区应用，避免它们重启后回到旧区域。
+    nonisolated static func accessibilityResetAssignments(
+        existing: [String: String], section: MenuBarSection.Name, ownBundle: String?
+    ) -> [String: String] {
+        existing.mapValues { _ in section.rawValue }.filter {
+            !$0.key.isEmpty && !$0.key.hasPrefix("com.apple.") && $0.key != ownBundle
+        }
     }
 
     private func prepareLayoutStateForReset() {

@@ -46,6 +46,11 @@ struct AttentionConditionEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if AccessibilityMenuBarBackend.isRequired {
+                Text("macOS 27 仅检测当前可见图标。请先展开项目再捕获参考图像；隐藏期间暂停图像比较和闪烁检测。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             WatchedItemPicker(
                 selection: itemBinding,
                 watchedID: watchedID,
@@ -98,6 +103,11 @@ struct ImageConditionEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if AccessibilityMenuBarBackend.isRequired {
+                Text("macOS 27 仅检测当前可见图标。请先展开项目再捕获参考图像；隐藏期间暂停图像比较和闪烁检测。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             WatchedItemPicker(
                 selection: itemBinding,
                 watchedID: watchedID,

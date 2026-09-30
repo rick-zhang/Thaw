@@ -162,6 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_: Notification) {
+        appState.itemManager.accessibilityVisibility.release()
         appState.diagLog.info("Application will terminate")
     }
 

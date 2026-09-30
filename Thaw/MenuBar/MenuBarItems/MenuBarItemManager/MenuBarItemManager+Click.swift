@@ -130,6 +130,10 @@ extension MenuBarItemManager {
     ///   - displayID: The display whose menu bar hosts a temporary reveal for
     ///     off-screen items.
     func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
+        if item.accessibilityItem != nil {
+            _ = await activateAccessibilityItem(item)
+            return
+        }
         if Bridging.isWindowOnScreen(item.windowID) {
             // Electron tray items ignore synthetic clicks, so use an AX press. Everything
             // else gets a real click, which keeps the native toggle and doesn't disturb
@@ -227,6 +231,12 @@ extension MenuBarItemManager {
         skipInputPause: Bool = false,
         maxAttempts: Int = 3
     ) async throws -> ClickReactionVerifier.Reaction {
+        if item.accessibilityItem != nil {
+            guard mouseButton == .left, await activateAccessibilityItem(item) else {
+                throw EventError.cannotComplete
+            }
+            return .unobserved
+        }
         guard let appState else {
             throw EventError.cannotComplete
         }

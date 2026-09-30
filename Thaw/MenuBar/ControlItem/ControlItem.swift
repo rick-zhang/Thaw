@@ -533,6 +533,12 @@ final class ControlItem {
     /// Writes only values that changed: on macOS 26 every status item write
     /// leaks Core Animation fence ports inside AppKit.
     private func updateStatusItem() {
+        // macOS 27 的合成菜单栏不支持超宽分隔符挤出项目；保留位置配置供旧系统使用。
+        if AccessibilityMenuBarBackend.isRequired, identifier != .visible {
+            removeSpacerItems()
+            removeFromMenuBar()
+            return
+        }
         guard
             let appState,
             let button = statusItem.button
@@ -798,7 +804,7 @@ final class ControlItem {
             // as during the reveal over a fullscreen app. Presentation options
             // are per-app, so check the item list. Right clicks still pass.
             let screenForCheck = window?.screen ?? NSScreen.main
-            if let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
+            if !AccessibilityMenuBarBackend.isRequired, let screen = screenForCheck, !screen.isSystemMenuBarVisible() {
                 return
             }
 

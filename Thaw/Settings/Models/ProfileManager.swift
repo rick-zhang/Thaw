@@ -532,7 +532,9 @@ final class ProfileManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder,
             newItemsPlacement: itemManager.newItemsPlacement,
-            itemHotkeys: itemHotkeys
+            itemHotkeys: itemHotkeys,
+            macOS27Assignments: AccessibilityMenuBarBackend.isRequired
+                ? (Defaults.store.dictionary(forKey: "macOS27SectionAssignments") as? [String: String] ?? [:]) : nil
         )
     }
 

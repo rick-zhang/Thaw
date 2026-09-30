@@ -8,10 +8,9 @@
 import AppKit
 
 enum MacOSCompatibilityWarning {
-    /// The first macOS this build doesn't support, and the one the rewrite
-    /// targets. On it, ``UpdateChannel/beta`` also takes the rewrite's alpha
-    /// builds, so the channel the alert switches to always reaches one.
-    static nonisolated let firstUnsupportedMajorVersion = 27
+    /// macOS 27 的迁移限制在相关功能处说明，不再在启动时阻断用户。
+    /// 未验证的后续系统仍保留启动警告；这不表示 macOS 27 已完整适配。
+    static nonisolated let firstUnsupportedMajorVersion = 28
 
     static nonisolated func shouldShow(for version: OperatingSystemVersion) -> Bool {
         version.majorVersion >= firstUnsupportedMajorVersion
@@ -78,6 +77,8 @@ enum MacOSCompatibilityWarning {
     /// Warns about the running macOS and offers the channel that supports it.
     @MainActor
     static func showIfNeeded(updatesManager: UpdatesManager?) {
+        // 测试宿主不得被交互式提示阻塞；正常应用仍显示兼容性说明。
+        guard NSClassFromString("XCTestCase") == nil else { return }
         let version = ProcessInfo.processInfo.operatingSystemVersion
         guard let prompt = prompt(for: version, canSubscribe: updatesManager != nil) else {
             return

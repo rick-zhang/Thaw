@@ -85,7 +85,7 @@ final class MenuBarSearchPanel: NSPanel {
     {
         switch selection {
         case let .item(tag, windowID):
-            if let windowID {
+            if let windowID, windowID != kCGNullWindowID {
                 return appState?.itemManager.itemCache.managedItems.first(where: { $0.windowID == windowID })
             }
             return appState?.itemManager.itemCache.managedItems.first(matching: tag)
@@ -105,7 +105,7 @@ final class MenuBarSearchPanel: NSPanel {
             model.editingItemWindowID = nil
             model.editingName = ""
         }
-        let item = if let windowID = model.editingItemWindowID {
+        let item = if let windowID = model.editingItemWindowID, windowID != kCGNullWindowID {
             appState?.itemManager.itemCache.managedItems.first(where: { $0.windowID == windowID })
         } else {
             appState?.itemManager.itemCache.managedItems.first(matching: tag)
@@ -661,7 +661,7 @@ private struct MenuBarSearchContentView: View {
                     guard !item.isControlItem else {
                         continue
                     }
-                    let listItem = ListItem.item(id: .item(item.tag, windowID: item.windowID)) {
+                    let listItem = ListItem.item(id: .item(item.tag, windowID: item.accessibilityItem == nil ? item.windowID : nil)) {
                         performAction(for: item)
                     } content: {
                         MenuBarSearchItemView(model: model, item: item)

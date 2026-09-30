@@ -172,6 +172,27 @@ final class LayoutBarPaddingView: NSView {
             return true
         }
 
+        if AccessibilityMenuBarBackend.isRequired, case let .item(item) = draggingSource.kind {
+            let sourceContainer = draggingSource.oldContainerInfo?.container
+            if let manager = container.appState?.itemManager {
+                if manager.itemCache.address(for: item.tag)?.section == container.section {
+                    manager.reorderAccessibilityItems(items(in: arrangedViews), in: container.section)
+                } else {
+                    manager.assignAccessibilityItem(item, to: container.section)
+                }
+            }
+            draggingSource.oldContainerInfo = nil
+            container.resumeArrangedViewUpdatesWithoutAnimation()
+            sourceContainer?.resumeArrangedViewUpdatesWithoutAnimation()
+            if let manager = container.appState?.itemManager {
+                container.setArrangedViews(items: manager.itemCache[container.section])
+                if let sourceContainer, sourceContainer !== container {
+                    sourceContainer.setArrangedViews(items: manager.itemCache[sourceContainer.section])
+                }
+            }
+            return true
+        }
+
         var willMove = false
         let sourceContainer = draggingSource.oldContainerInfo?.container
 

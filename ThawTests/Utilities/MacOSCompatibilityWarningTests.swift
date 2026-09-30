@@ -11,17 +11,17 @@ import Testing
 
 @Suite("macOS compatibility warning")
 struct MacOSCompatibilityWarningTests {
-    @Test("macOS 27 and later show the warning", arguments: [27, 28])
+    @Test("macOS 28 及后续版本仍显示警告", arguments: [28, 29])
     func unsupportedVersionsShowWarning(majorVersion: Int) {
         #expect(MacOSCompatibilityWarning.shouldShow(for: version(majorVersion)))
     }
 
-    @Test("macOS 26 and earlier do not show the warning", arguments: [25, 26])
+    @Test("macOS 27 不再显示阻断式启动警告", arguments: [25, 26, 27])
     func supportedVersionsDoNotShowWarning(majorVersion: Int) {
         #expect(!MacOSCompatibilityWarning.shouldShow(for: version(majorVersion)))
     }
 
-    @Test("A supported macOS is owed no prompt", arguments: [25, 26])
+    @Test("A supported macOS is owed no prompt", arguments: [25, 26, 27])
     func supportedVersionsHaveNoPrompt(majorVersion: Int) {
         #expect(MacOSCompatibilityWarning.prompt(for: version(majorVersion), canSubscribe: true) == nil)
     }
@@ -30,14 +30,14 @@ struct MacOSCompatibilityWarningTests {
     /// user is still told, and still given somewhere to go.
     @Test("Without a manager the prompt sends the user to the releases page")
     func noManagerOffersPreviewBuilds() throws {
-        let prompt = try #require(MacOSCompatibilityWarning.prompt(for: version(27), canSubscribe: false))
+        let prompt = try #require(MacOSCompatibilityWarning.prompt(for: version(28), canSubscribe: false))
         #expect(prompt.action == .openReleasesPage)
         #expect(prompt.confirmButtonTitle == String(localized: "View Preview Builds"))
     }
 
     @Test("With a manager the prompt offers the beta channel")
     func managerOffersBetaChannel() throws {
-        let prompt = try #require(MacOSCompatibilityWarning.prompt(for: version(27), canSubscribe: true))
+        let prompt = try #require(MacOSCompatibilityWarning.prompt(for: version(28), canSubscribe: true))
         #expect(prompt.action == .subscribeToBeta)
         #expect(prompt.confirmButtonTitle == String(localized: "Switch to Beta Updates"))
     }
@@ -54,7 +54,7 @@ struct MacOSCompatibilityWarningTests {
 
     /// The warning fires on every release from the unsupported one onward, so
     /// a later macOS must not be told about the first one this build refused.
-    @Test("The copy names the running macOS", arguments: [27, 28, 30])
+    @Test("The copy names the running macOS", arguments: [28, 29, 30])
     func copyNamesTheRunningRelease(majorVersion: Int) throws {
         let prompt = try #require(
             MacOSCompatibilityWarning.prompt(for: version(majorVersion), canSubscribe: true)

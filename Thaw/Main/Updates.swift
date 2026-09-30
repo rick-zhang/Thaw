@@ -369,14 +369,13 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
 
     /// Whether this channel can be offered on a system running `version`.
     ///
-    /// Alpha is offered only on the macOS this build doesn't support, since
-    /// elsewhere its builds can't run.
+    /// macOS 27 的适配预览通道独立于启动警告，不能随警告阈值改变。
     func isAvailable(on version: OperatingSystemVersion) -> Bool {
         switch self {
         case .stable, .beta:
             true
         case .alpha:
-            version.majorVersion >= MacOSCompatibilityWarning.firstUnsupportedMajorVersion
+            version.majorVersion >= 27
         }
     }
 

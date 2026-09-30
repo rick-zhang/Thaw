@@ -67,6 +67,10 @@ extension MenuBarItemImageCache {
         sections: [MenuBarSection.Name],
         preferredDisplayID: CGDirectDisplayID? = nil
     ) async {
+        if AccessibilityMenuBarBackend.isRequired {
+            await captureAccessibilityImages(sections: sections, displayID: preferredDisplayID)
+            return
+        }
         guard let appState else {
             MenuBarItemImageCache.diagLog.warning("updateCacheWithoutChecks: appState is nil, aborting")
             return

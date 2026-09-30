@@ -61,6 +61,21 @@ extension MenuBarItemManager {
         triggerReleaseRecacheTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(6))
             guard !Task.isCancelled, let self else { return }
+            if AccessibilityMenuBarBackend.isRequired {
+                while self.accessibilityAssignmentInFlight {
+                    do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+                }
+                guard !Task.isCancelled else { return }
+                let bundles = MenuBarVisibility27.releasedBundles(
+                    previous: releasedIdentifiers, current: self.triggerControlledItemIdentifiers
+                )
+                let baseline = Defaults.store.dictionary(forKey: "macOS27SectionAssignments") as? [String: String] ?? [:]
+                var assignments = self.accessibilityAssignments
+                for bundle in bundles { assignments[bundle] = baseline[bundle] ?? "visible" }
+                _ = await self.commitAccessibilityAssignments(assignments, persist: false)
+                self.triggerLayoutRestorationItemIdentifiers.subtract(releasedIdentifiers)
+                return
+            }
             await self.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
             // Don't clear the handle: it may belong to a newer release's task.
         }
@@ -255,6 +270,17 @@ extension MenuBarItemManager {
             return .deferred
         }
         guard options.shouldProceed?() ?? true else { return .deferred }
+
+        if AccessibilityMenuBarBackend.isRequired {
+            guard !accessibilityAssignmentInFlight else { return .deferred }
+            guard let item = itemCache.managedItems.first(where: { $0.tag.tagIdentifier == tagIdentifier }),
+                  item.isMovable, let bundle = item.accessibilityItem?.host.bundleID
+            else { return .unavailable }
+            if itemCache.address(for: item.tag)?.section == section { return .alreadyInSection }
+            var assignments = accessibilityAssignments
+            assignments[bundle] = section.rawValue
+            return await commitAccessibilityAssignments(assignments, persist: false) ? .moved : .failed
+        }
 
         // Drop transient WindowServer duplicates.
         var items = await MenuBarItem

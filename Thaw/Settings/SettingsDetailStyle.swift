@@ -11,8 +11,8 @@ import SwiftUI
 // MARK: - SettingsDetailLayout
 
 enum SettingsDetailLayout {
-    /// Comfortable reading width for settings groups.
-    static let columnMaxWidth: CGFloat = 680
+    /// 大窗口下适当扩展配置区域，减少留白；窄窗口仍按可用宽度收缩。
+    static let columnMaxWidth: CGFloat = 1120
     /// Leading inset aligned with grouped form section cards / headers.
     static let titleHorizontalInset: CGFloat = 28
 }

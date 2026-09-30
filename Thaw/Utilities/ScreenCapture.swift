@@ -125,6 +125,42 @@ nonisolated enum ScreenCapture {
         await captureWindowsAsync(with: [windowID], screenBounds: screenBounds, option: option)
     }
 
+    /// macOS 27 将状态图标合成到 MenuBarAgent 的宿主窗口。
+    /// 参照上游 macos-27-preview.3；所有坐标统一为 CG 左上角坐标。
+    struct MenuBarHostingCapture {
+        let image: CGImage
+        let frame: CGRect
+        let scale: CGFloat
+    }
+
+    static func captureMenuBarHostingWindow(displayID: CGDirectDisplayID) async -> MenuBarHostingCapture? {
+        do {
+            let content = try await getShareableContent()
+            guard let display = content.displays.first(where: { $0.displayID == displayID }) else { return nil }
+            let window = content.windows.filter {
+                $0.owningApplication?.bundleIdentifier == "com.apple.MenuBarAgent"
+                    && $0.frame.height > 0 && $0.frame.height <= 48
+                    && $0.frame.width >= display.frame.width * 0.8
+                    && abs($0.frame.minX - display.frame.minX) < 2
+                    && abs($0.frame.minY - display.frame.minY) < 2
+            }.max { $0.windowID < $1.windowID }
+            // 宿主窗口的 isOnScreen 可能为 false，但仍可捕获，不能据此过滤。
+            guard let window else { return nil }
+            let filter = SCContentFilter(desktopIndependentWindow: window)
+            let scale = CGFloat(filter.pointPixelScale)
+            let config = SCStreamConfiguration()
+            config.showsCursor = false
+            config.ignoreShadowsSingleWindow = true
+            config.width = Int((window.frame.width * scale).rounded())
+            config.height = Int((window.frame.height * scale).rounded())
+            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+            return MenuBarHostingCapture(image: image, frame: window.frame, scale: scale)
+        } catch {
+            diagLog.debug("菜单栏宿主窗口捕获失败：\(error)")
+            return nil
+        }
+    }
+
     // MARK: - ScreenCaptureKit Implementation
 
     /// Captures a composite image of all windows below the specified window using ScreenCaptureKit.

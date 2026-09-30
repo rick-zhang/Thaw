@@ -22,6 +22,7 @@ struct IceForm<Content: View>: View {
         // Form scrolls full-width so the scrollbar sits at the window edge.
         Form {
             content
+                .frame(minWidth: contentWidth, alignment: .leading)
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -44,5 +45,11 @@ struct IceForm<Content: View>: View {
             return 0
         }
         return overflow / 2
+    }
+
+    /// 原生表单会按理想宽度收窄内容，显式提供随窗口收缩的最小宽度。
+    private var contentWidth: CGFloat {
+        max(0, min(SettingsDetailLayout.columnMaxWidth,
+                   formWidth - SettingsDetailLayout.titleHorizontalInset * 2))
     }
 }

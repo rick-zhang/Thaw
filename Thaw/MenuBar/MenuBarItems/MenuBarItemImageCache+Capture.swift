@@ -480,6 +480,17 @@ extension MenuBarItemImageCache {
     ) async -> [String: CGImage] {
         guard let appState, !identifiers.isEmpty else { return [:] }
 
+        if AccessibilityMenuBarBackend.isRequired {
+            var result = [String: CGImage]()
+            await withCapturePermit {
+                let fresh = await captureAccessibilityImages(sections: MenuBarSection.Name.allCases, displayID: nil)
+                for (tag, image) in fresh where identifiers.contains(tag.tagIdentifier) {
+                    result[tag.tagIdentifier] = image.cgImage
+                }
+            }
+            return result
+        }
+
         let requests: [IdentifierCaptureRequest] = appState.itemManager.itemCache.managedItems.compactMap { item in
             let identifier = item.tag.tagIdentifier
             guard identifiers.contains(identifier) else { return nil }
@@ -551,7 +562,7 @@ extension MenuBarItemImageCache {
 
     /// Feeds a batch of captures to the attention detector and republishes
     /// the verdict when it changes.
-    private func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
+    func recordForAttention(_ newImages: [MenuBarItemTag: CapturedImage]) {
         let globalAttentionDetection = Defaults.bool(forKey: .surfaceItemsSeekingAttention)
         guard globalAttentionDetection || !attentionDetectionItemIdentifiers.isEmpty else {
             if !tagsSeekingAttention.isEmpty {

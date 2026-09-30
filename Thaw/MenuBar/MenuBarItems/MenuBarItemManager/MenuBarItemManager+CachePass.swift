@@ -93,6 +93,16 @@ extension MenuBarItemManager {
         waiterToken: Int? = nil,
         cacheAttempt: CacheAttempt? = nil
     ) async {
+        // 新系统没有独立项目窗口；停止旧分隔符重建，保留原布局配置。
+        guard !AccessibilityMenuBarBackend.isRequired else {
+            let cycles = completedCacheCycles
+            await cacheAccessibilityItems()
+            cacheAttempt?.recordCompletion(
+                cyclesAtEntry: cycles, cyclesAtExit: completedCacheCycles, snapshotRemainedCurrent: true
+            )
+            if let waiterToken { resumeBackgroundCacheWaiter(waiterToken) }
+            return
+        }
         let skipRecentMoveCheck = options.skipRecentMoveCheck
         let resolveSourcePID = options.resolveSourcePID
         let reuseCachedIdentities = options.reuseCachedIdentities

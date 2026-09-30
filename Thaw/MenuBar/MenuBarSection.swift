@@ -110,6 +110,10 @@ final class MenuBarSection {
 
     /// A Boolean value that indicates whether the section is hidden.
     var isHidden: Bool {
+        if AccessibilityMenuBarBackend.isRequired {
+            if menuBarManager?.iceBarPanel.currentSection == (name == .visible ? .hidden : name) { return false }
+            return !(appState?.itemManager.accessibilityExpandedSections.contains(name == .visible ? .hidden : name) ?? false)
+        }
         if useIceBar {
             if controlItem.state == .showSection {
                 return false
@@ -137,6 +141,9 @@ final class MenuBarSection {
 
     /// A Boolean value that indicates whether the section is enabled.
     var isEnabled: Bool {
+        if AccessibilityMenuBarBackend.isRequired {
+            return name != .alwaysHidden || appState?.settings.advanced.enableAlwaysHiddenSection == true
+        }
         if case .visible = name {
             return true
         }
@@ -226,6 +233,18 @@ final class MenuBarSection {
     }
 
     func show(triggeredByHotkey: Bool = false) {
+        if AccessibilityMenuBarBackend.isRequired {
+            if useIceBar, let screen = screenForIceBar {
+                menuBarManager?.iceBarPanel.show(
+                    section: name == .visible ? .hidden : name, on: screen, triggeredByHotkey: triggeredByHotkey
+                )
+            } else {
+                appState?.itemManager.setAccessibilitySection(name, expanded: true)
+            }
+            desiredState = .showSection
+            startRehideChecks()
+            return
+        }
         guard let menuBarManager, isHidden else {
             return
         }
@@ -322,6 +341,13 @@ final class MenuBarSection {
     }
 
     func hide() {
+        if AccessibilityMenuBarBackend.isRequired {
+            menuBarManager?.iceBarPanel.close()
+            appState?.itemManager.setAccessibilitySection(name, expanded: false)
+            desiredState = .hideSection
+            stopRehideChecks()
+            return
+        }
         guard let menuBarManager, !isHidden else {
             return
         }

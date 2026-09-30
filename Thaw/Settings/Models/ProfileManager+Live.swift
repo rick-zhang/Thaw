@@ -255,7 +255,8 @@ extension ProfileManager {
                     pinnedAlwaysHidden: pinnedAlwaysHidden,
                     sectionOrder: sectionOrder,
                     itemSectionMap: itemSectionMap,
-                    itemOrder: itemOrder
+                    itemOrder: itemOrder,
+                    macOS27Assignments: profile.menuBarLayout.macOS27Assignments
                 ),
                 enforceConcealedSectionOrder: enforceConcealedSectionOrder,
                 shouldBegin: {

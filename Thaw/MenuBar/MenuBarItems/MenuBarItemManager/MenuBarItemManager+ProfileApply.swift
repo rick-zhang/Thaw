@@ -38,6 +38,8 @@ extension MenuBarItemManager {
 
     /// Debounced re-apply of the active profile to place late-arriving items.
     func scheduleProfileResort() {
+        // 新版分区按应用生效，后启动的应用由 AX 刷新处理，不重复执行旧排序。
+        guard !AccessibilityMenuBarBackend.isRequired else { return }
         profileResortTask?.cancel()
         guard let lease = beginLayoutBatch(.profileResort) else { return }
         profileResortTask = Task { [weak self] in
@@ -115,6 +117,7 @@ extension MenuBarItemManager {
         let sectionOrder: [String: [String]]
         let itemSectionMap: [String: String]
         let itemOrder: [String: [String]]
+        var macOS27Assignments: [String: String]? = nil
     }
 
     /// Decides which state an apply arms and clears; the body is the same.
@@ -331,6 +334,33 @@ extension MenuBarItemManager {
         enforceConcealedSectionOrder: Bool = false,
         shouldBegin: (@MainActor () -> Bool)? = nil
     ) async {
+        if AccessibilityMenuBarBackend.isRequired {
+            // 新系统的配置分区独立保存，不能交给旧窗口移动事务。
+            guard case .profile = source else { return }
+            while accessibilityAssignmentInFlight {
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+            }
+            guard !Task.isCancelled, shouldBegin?() ?? true else { return }
+            let assignments = MenuBarVisibility27.profileAssignments(
+                explicit: spec.macOS27Assignments, itemSections: spec.itemSectionMap,
+                pinnedHidden: spec.pinnedHidden, pinnedAlwaysHidden: spec.pinnedAlwaysHidden
+            )
+            guard await commitAccessibilityAssignments(assignments) else { return }
+            // 分区先提交，再按稳定标识恢复区内顺序；旧窗口编号在新版不可用。
+            var restored = true
+            for section in MenuBarSection.Name.allCases {
+                let saved = spec.itemOrder[section.rawValue] ?? spec.sectionOrder[section.rawValue] ?? []
+                guard !saved.isEmpty else { continue }
+                let current = itemCache[section]
+                let identifiers = Self.accessibilityProfileOrder(saved: saved, current: current.map(\.uniqueIdentifier))
+                let desired = identifiers.compactMap { id in current.first { $0.uniqueIdentifier == id } }
+                if !(await restoreAccessibilityOrder(desired, in: section)) { restored = false }
+            }
+            if !restored {
+                accessibilityLayoutError = "配置分区已恢复，但部分图标顺序未获系统确认。请展开项目后重新应用配置。"
+            }
+            return
+        }
         let pinnedHidden = spec.pinnedHidden
         let pinnedAlwaysHidden = spec.pinnedAlwaysHidden
         let rawSectionOrder = spec.sectionOrder

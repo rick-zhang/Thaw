@@ -37,6 +37,12 @@ $(SRCROOT)/Thaw/Main/Navigation/AppNavigationState.swift
 $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/NavigationIdentifier.swift
 $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/SettingsNavigationIdentifier.swift
 $(SRCROOT)/Thaw/Main/Updates.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/AccessibilityMenuBarBackend.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemImageCache+Accessibility.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemManager+Accessibility.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemManager+AccessibilityNewItems.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemManager+AccessibilityOrder.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarVisibility27.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarAppearanceConfigurationV1.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarAppearanceConfigurationV2.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/Configurations/MenuBarShapes.swift

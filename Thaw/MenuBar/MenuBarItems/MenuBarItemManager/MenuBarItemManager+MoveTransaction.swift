@@ -395,6 +395,10 @@ extension MenuBarItemManager {
         skipInputPause: Bool = false,
         options: MoveOptions = .init()
     ) async throws {
+        // AX 项目不得进入依赖真实窗口编号的旧移动协议。
+        guard item.accessibilityItem == nil, destination.targetItem.accessibilityItem == nil else {
+            throw EventError.cannotComplete
+        }
         let budget = Self.currentMoveBudget ?? MoveTransactionBudget(limit: Self.moveDeadline)
 
         // Nested recovery moves already own the gate.

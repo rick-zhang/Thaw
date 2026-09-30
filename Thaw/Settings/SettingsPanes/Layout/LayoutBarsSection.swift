@@ -40,11 +40,28 @@ struct LayoutBarsSection: View {
             }
         } content: {
             layoutBars
+            if AccessibilityMenuBarBackend.isRequired {
+                Text("macOS 27（实验性）：可拖动分区和排序，同一应用的图标一起隐藏。排序时会临时展开项目；隐藏期间如需使用通知中心，请先展开项目。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                HStack {
+                    Button("展开所有项目") { itemManager.setAccessibilitySection(.alwaysHidden, expanded: true) }
+                    Button("收起隐藏项目") { itemManager.setAccessibilitySection(.hidden, expanded: false) }
+                }
+                .disabled(itemManager.accessibilityAssignmentInFlight)
+                if let error = itemManager.accessibilityLayoutError {
+                    Text(error).foregroundStyle(.red)
+                }
+            }
         } footer: {
             // Interpolated so the four localized strings wrap as one
             // paragraph (Text + is deprecated on macOS 26).
+            if AccessibilityMenuBarBackend.isRequired {
+                Text("隐藏项目展开后自动排列在显示项目左侧。点击图标打开项目；同一应用的多个图标会一同调整，分区对所有显示器生效。")
+            } else {
             Text("\(Text("Drag to arrange your menu bar items into different sections.")) \(Text("Move the New Items badge to choose where newly detected items will appear.")) \(Text("Items can also be arranged by ⌘ Command + dragging them in the menu bar.")) \(Text("Click an item to open it. Hidden items are temporarily revealed."))")
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .onReceive(
             NotificationCenter.default
@@ -86,7 +103,19 @@ struct LayoutBarsSection: View {
         .overlay {
             if !hasItems {
                 VStack(spacing: 8) {
-                    if loadDeadlineReached {
+                    if AccessibilityMenuBarBackend.isRequired {
+                        if !AXHelpers.isProcessTrusted() {
+                            Text("请在系统设置中授予 Thaw 辅助功能权限。")
+                        } else if loadDeadlineReached {
+                            Text("暂未读取到菜单栏项目，请稍后重试。")
+                            Button("重新读取") {
+                                Task { await itemManager.cacheAccessibilityItems() }
+                            }
+                        } else {
+                            Text("正在读取 macOS 27 菜单栏项目")
+                            ProgressView()
+                        }
+                    } else if loadDeadlineReached {
                         VStack(spacing: 4) {
                             if areControlItemsDisabledBySystem {
                                 Text("One or more section dividers are hidden by macOS")
@@ -148,6 +177,7 @@ struct LayoutBarsSection: View {
                     }
                     .help(Text("Sort the items in this section alphabetically by name."))
                     .buttonStyle(.borderless)
+                    .disabled(itemManager.accessibilityAssignmentInFlight)
                 }
 
                 LayoutBar(section: name)
@@ -215,7 +245,7 @@ struct LayoutResetControls: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                .disabled(isResettingLayout || controlItemsDisabled)
+                .disabled(isResettingLayout || itemManager.accessibilityAssignmentInFlight || (controlItemsDisabled && !AccessibilityMenuBarBackend.isRequired))
             }
 
             if isConfirmingReset {

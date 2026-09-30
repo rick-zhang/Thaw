@@ -30,6 +30,22 @@ final class MenuBarItemManager {
     /// The current cache of menu bar items.
     var itemCache = ItemCache(displayID: nil)
 
+    let accessibilityVisibility = MenuBarVisibility27()
+    var accessibilityLayoutError: String?
+    var accessibilityLastScan = Date.distantPast
+    var accessibilityScanRunning = false
+    var accessibilityAssignmentInFlight = false
+    var accessibilityBoundaryRetryAfter = Date.distantPast
+    var accessibilityKnownItems: [String: MenuBarItem] = [:]
+    var accessibilityExpandedSections = Set<MenuBarSection.Name>()
+    var accessibilityAssignments = Defaults.store.dictionary(forKey: "macOS27SectionAssignments") as? [String: String] ?? [:]
+    var accessibilitySeenItems = Set(Defaults.store.stringArray(forKey: "macOS27SeenItems") ?? [])
+    var accessibilityNeedsBaseline = Defaults.store.object(forKey: "macOS27SeenItems") == nil
+    var accessibilityBaselinePIDs = Set<pid_t>()
+    var accessibilityPendingNewItems = (Defaults.store.data(forKey: "macOS27PendingNewItems")
+        .flatMap { try? JSONDecoder().decode([String: NewItemsPlacement].self, from: $0) }) ?? [:]
+    var accessibilityNewItemsRetryAfter = Date.distantPast
+
     /// A Boolean value that indicates whether the control items for the
     /// hidden sections are missing from the menu bar.
     var areControlItemsMissing = false
@@ -1069,6 +1085,23 @@ final class MenuBarItemManager {
     /// applies it. Returns the sorted identifiers, or nil if empty.
     @discardableResult
     func sortSection(_ section: MenuBarSection.Name) -> [String]? {
+        if AccessibilityMenuBarBackend.isRequired, itemCache[section].contains(where: { $0.accessibilityItem != nil }) {
+            // 系统项目作为固定锚点；仅排序相邻锚点之间的可移动项目。
+            var sorted = [MenuBarItem]()
+            var run = [MenuBarItem]()
+            for item in itemCache[section] {
+                if item.isMovable {
+                    run.append(item)
+                } else {
+                    sorted += run.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+                    run.removeAll()
+                    sorted.append(item)
+                }
+            }
+            sorted += run.sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+            reorderAccessibilityItems(sorted, in: section)
+            return nil
+        }
         let items = itemCache.managedItems(for: section)
         guard !items.isEmpty else { return nil }
 
@@ -1269,7 +1302,7 @@ final class MenuBarItemManager {
 
         // The anchor is gone (e.g. ejected by notch overflow); place the
         // badge against its nearest surviving profile sibling instead.
-        if let nearestIndex = badgeIndexFromNearestProfileSibling(
+        if !AccessibilityMenuBarBackend.isRequired, let nearestIndex = badgeIndexFromNearestProfileSibling(
             in: section,
             itemIdentifiers: itemIdentifiers
         ) {

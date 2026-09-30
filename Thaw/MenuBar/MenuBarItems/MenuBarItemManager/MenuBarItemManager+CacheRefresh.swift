@@ -58,6 +58,10 @@ extension MenuBarItemManager {
 
     /// Caches the current items if they changed, fixing the control item order first.
     func cacheItemsIfNeeded() async {
+        if AccessibilityMenuBarBackend.isRequired {
+            if Date().timeIntervalSince(accessibilityLastScan) > 3 { await cacheAccessibilityItems() }
+            return
+        }
         let rawWindowIDs = Bridging.getMenuBarWindowList(option: [.itemsOnly, .activeSpace])
         // Known clones don't count as changes. A new clone costs one recache.
         let cloneIDs = cacheActor.cachedCloneWindowIDs
