@@ -18,13 +18,15 @@ struct MovePolicyTests {
     private func configuration(
         maxAttempts: Int = 8,
         itemIsControlItem: Bool = false,
-        ownerHasSilentRecord: Bool = false
+        ownerHasSilentRecord: Bool = false,
+        itemOwnerIsUnattributable: Bool = false
     ) -> Policy.Configuration {
         Policy.Configuration(
             maxAttempts: maxAttempts,
             displayWidth: 1728,
             itemIsControlItem: itemIsControlItem,
-            ownerHasSilentRecord: ownerHasSilentRecord
+            ownerHasSilentRecord: ownerHasSilentRecord,
+            itemOwnerIsUnattributable: itemOwnerIsUnattributable
         )
     }
 
@@ -130,6 +132,69 @@ struct MovePolicyTests {
         #expect(decisions([displaced, .landed], configuration: configuration(ownerHasSilentRecord: true)) == [.retry, .succeed])
     }
 
+    /// An iPhone-mirrored Live Activity arrives as a generic Control Center
+    /// slot that no pass can attribute (#722), and the usual press at the
+    /// destination never reaches it. Repeating that press produced eight
+    /// identical timeouts and eight seconds of stolen cursor in the field.
+    /// The first silence must instead buy the source-anchored press; a host
+    /// that ignores that one too is not going to answer any repeat.
+    @Test("An unattributable item's silence buys the source-anchored press, then stops")
+    func unattributableSilenceRetriesOnceWithTheSourceAnchoredPress() {
+        let silent = Policy.Observation.failed(.ownerSilent)
+        var state = Policy.State(plannedTargetMinX: -3725)
+        let configuration = configuration(itemOwnerIsUnattributable: true)
+
+        #expect(Policy.decide(after: silent, state: &state, configuration: configuration) == .retry)
+        #expect(
+            state.unattributableSilentRun == 1,
+            "a nonzero run is what switches the caller to the source-anchored press"
+        )
+        #expect(Policy.decide(after: silent, state: &state, configuration: configuration) == .stop(.ownerCannotBeAddressed))
+        #expect(state.attempts == 2, "the whole move costs two attempts, not the eight-attempt budget")
+    }
+
+    @Test("An unattributable item that answers keeps its full budget")
+    func unattributableItemThatAnswersIsNotShortened() {
+        let displaced = Policy.Observation.displaced(revertedToStart: false, targetMinX: -3725)
+        var state = Policy.State(plannedTargetMinX: -3725)
+        let configuration = configuration(maxAttempts: 3, itemOwnerIsUnattributable: true)
+
+        let decided = (0 ..< 3).map { _ in
+            Policy.decide(after: displaced, state: &state, configuration: configuration)
+        }
+        #expect(decided == [.retry, .retry, .stop(.budgetExhausted)])
+        #expect(state.unattributableSilentRun == 0)
+    }
+
+    /// The ledger already knows the owner ignores events, so the first
+    /// silence ends the move without spending the extra attempt.
+    @Test("A standing silent record outranks the unattributable retry")
+    func silentRecordOutranksUnattributableRetry() {
+        let silent = Policy.Observation.failed(.ownerSilent)
+        let configuration = configuration(
+            ownerHasSilentRecord: true,
+            itemOwnerIsUnattributable: true
+        )
+        #expect(decisions([silent], configuration: configuration) == [.stop(.ownerAlwaysSilent)])
+    }
+
+    /// A single attempt has nothing to spend on the second gesture.
+    @Test("An unattributable item with a one-attempt budget still stops on its silence")
+    func unattributableOneAttemptBudgetStops() {
+        let silent = Policy.Observation.failed(.ownerSilent)
+        let configuration = configuration(maxAttempts: 1, itemOwnerIsUnattributable: true)
+        #expect(decisions([silent], configuration: configuration) == [.stop(.ownerSilent)])
+    }
+
+    /// Items that do name an owner keep the old budget: their silence may still
+    /// be contention, and the destination-anchored press does reach them.
+    @Test("A silence from an attributable item still spends the whole budget")
+    func attributableSilenceKeepsTheBudget() {
+        let silent = Policy.Observation.failed(.ownerSilent)
+        let result = decisions(Array(repeating: silent, count: 3), configuration: configuration(maxAttempts: 3))
+        #expect(result == [.retry, .retry, .stop(.ownerSilent)])
+    }
+
     @Test("Definitive failures stop on the attempt they occur", arguments: [
         (Policy.AttemptFailure.itemGone, Policy.StopReason.itemGone),
         (.destinationGone, .destinationGone),
@@ -200,7 +265,8 @@ struct MovePolicyTests {
     // MARK: Stop reasons
 
     @Test("Reasons that leave the item possibly landed get the final check", arguments: [
-        Policy.StopReason.targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .overran, .budgetExhausted, .other,
+        Policy.StopReason.targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent,
+        .ownerCannotBeAddressed, .overran, .budgetExhausted, .other,
     ])
     func finalCheckReasons(reason: Policy.StopReason) {
         #expect(reason.deservesFinalLandingCheck)
@@ -215,7 +281,7 @@ struct MovePolicyTests {
 
     @Test("Only silence is filed against the owner")
     func onlySilenceIsFiled() {
-        let filed: [Policy.StopReason] = [.ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent]
+        let filed: [Policy.StopReason] = [.ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent, .ownerCannotBeAddressed]
         let notFiled: [Policy.StopReason] = [.refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .superseded, .overran, .unsafePath, .budgetExhausted, .other]
         let everyFiledReasonIsFiled = filed.allSatisfy(\.isFiledAgainstOwner)
         let noOtherReasonIsFiled = notFiled.allSatisfy { !$0.isFiledAgainstOwner }
@@ -257,6 +323,7 @@ struct MovePolicyTests {
         (.unsafePath, "unsafeMovePath"),
         (.budgetExhausted, "cannotComplete"),
         (.ownerSilent, "cannotComplete"),
+        (.ownerCannotBeAddressed, "cannotComplete"),
         (.other, "cannotComplete"),
     ])
     func stopReasonErrors(reason: Policy.StopReason, expected: String) {

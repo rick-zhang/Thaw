@@ -17,7 +17,9 @@ extension MenuBarItemImageCache {
         var captured = [MenuBarItemTag: CapturedImage]()
         defer {
             // 只清理本批负责的项目，不能让局部刷新清掉另一分区的检测历史。
-            for tag in requestedTags where captured[tag] == nil { clearAttention(for: tag) }
+            for tag in requestedTags where captured[tag] == nil {
+                clearAttention(for: tag)
+            }
             recordForAttention(captured)
         }
         guard appState.hasPermission(.screenRecording), !sections.isEmpty,
@@ -44,9 +46,12 @@ extension MenuBarItemImageCache {
             guard let ax = item.accessibilityItem, let frame = before[ax.id], after[ax.id] == frame,
                   capture.frame.contains(frame), AccessibilityMenuBarBackend.isValidFrame(frame)
             else { continue }
-            let rect = CGRect(x: (frame.minX - capture.frame.minX) * capture.scale,
-                              y: (frame.minY - capture.frame.minY) * capture.scale,
-                              width: frame.width * capture.scale, height: frame.height * capture.scale).integral
+            let rect = CGRect(
+                x: (frame.minX - capture.frame.minX) * capture.scale,
+                y: (frame.minY - capture.frame.minY) * capture.scale,
+                width: frame.width * capture.scale,
+                height: frame.height * capture.scale
+            ).integral
             guard let image = capture.image.cropping(to: rect), !image.isTransparent(alphaThreshold: 0.05) else { continue }
             images[item.tag] = CapturedImage(cgImage: image, scale: capture.scale)
             updateAccessOrder(for: item.tag)

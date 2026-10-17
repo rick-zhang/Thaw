@@ -246,7 +246,7 @@ extension DisplaySettingsManager {
     }
 
     /// App-modal so it shows with Settings closed. Returns whether the user
-    /// approved. The suppression checkbox only takes effect on Apply.
+    /// approved.
     private func presentSpacingRelaunchConfirmation() -> Bool {
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -257,9 +257,22 @@ extension DisplaySettingsManager {
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = String(localized: "Don't ask again")
         let apply = alert.runModal() == .alertFirstButtonReturn
-        if apply, alert.suppressionButton?.state == .on {
-            confirmSpacingRelaunch = false
+        if alert.suppressionButton?.state == .on {
+            rememberSpacingRelaunchAnswer(approved: apply)
         }
         return apply
+    }
+
+    /// Makes a "Don't ask again" answer stick. Apply turns confirmations
+    /// off. Cancel switches to `writeOnly`, so later applies relaunch nothing
+    /// and have nothing to ask about.
+    ///
+    /// Internal so tests can call it without running the alert.
+    func rememberSpacingRelaunchAnswer(approved: Bool) {
+        if approved {
+            confirmSpacingRelaunch = false
+        } else {
+            spacingApplyMode = .writeOnly
+        }
     }
 }

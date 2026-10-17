@@ -134,6 +134,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: selected,
             selectedDisplayID: selected,
@@ -142,6 +143,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: false,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: selected,
             selectedDisplayID: selected,
@@ -150,11 +152,42 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: true,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: selected,
             selectedDisplayID: selected,
             horizontalPath: .sameSafeSegment
         ) == .use(.teleport))
+    }
+
+    @Test("An item with no addressable owner always gets a real drag")
+    func unattributableItemForcesFaithfulDrag() {
+        let selected: CGDirectDisplayID = 1
+        // Measured on macOS 26.7 against a mirrored Live Activity: a teleport
+        // presses at the destination and posts no dragged step, so it is ignored
+        // outright; a press inside the item released without travel moves it and
+        // macOS puts it straight back. Only a real drag is kept, so the gesture
+        // is forced whatever the faithful-drag setting says.
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: false,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: true,
+            sourceDisplayID: selected,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .sameSafeSegment
+        ) == .use(.faithfulDrag))
+        // A parked endpoint keeps its own transport: its release has to stay on
+        // the planned off-screen point, which a drag cannot reach safely.
+        #expect(MenuBarItemManager.strictTransportDecision(
+            faithfulDragEnabled: false,
+            itemIsControlItem: false,
+            itemNeedsPointerTravel: true,
+            sourceDisplayID: nil,
+            destinationDisplayID: selected,
+            selectedDisplayID: selected,
+            horizontalPath: .invalidEndpoint
+        ) == .use(.parkedTeleport))
     }
 
     @Test("Parked and cross-notch teleports are explicit decisions")
@@ -163,6 +196,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: nil,
             destinationDisplayID: selected,
             selectedDisplayID: selected,
@@ -171,6 +205,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: selected,
             selectedDisplayID: selected,
@@ -185,6 +220,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: other,
             selectedDisplayID: selected,
@@ -193,6 +229,7 @@ struct MoveGestureTests {
         #expect(MenuBarItemManager.strictTransportDecision(
             faithfulDragEnabled: true,
             itemIsControlItem: false,
+            itemNeedsPointerTravel: false,
             sourceDisplayID: selected,
             destinationDisplayID: selected,
             selectedDisplayID: selected,

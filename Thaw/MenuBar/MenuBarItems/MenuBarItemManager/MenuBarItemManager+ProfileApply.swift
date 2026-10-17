@@ -117,7 +117,7 @@ extension MenuBarItemManager {
         let sectionOrder: [String: [String]]
         let itemSectionMap: [String: String]
         let itemOrder: [String: [String]]
-        var macOS27Assignments: [String: String]? = nil
+        var macOS27Assignments: [String: String]?
     }
 
     /// Decides which state an apply arms and clears; the body is the same.
@@ -342,8 +342,10 @@ extension MenuBarItemManager {
             }
             guard !Task.isCancelled, shouldBegin?() ?? true else { return }
             let assignments = MenuBarVisibility27.profileAssignments(
-                explicit: spec.macOS27Assignments, itemSections: spec.itemSectionMap,
-                pinnedHidden: spec.pinnedHidden, pinnedAlwaysHidden: spec.pinnedAlwaysHidden
+                explicit: spec.macOS27Assignments,
+                itemSections: spec.itemSectionMap,
+                pinnedHidden: spec.pinnedHidden,
+                pinnedAlwaysHidden: spec.pinnedAlwaysHidden
             )
             guard await commitAccessibilityAssignments(assignments) else { return }
             // 分区先提交，再按稳定标识恢复区内顺序；旧窗口编号在新版不可用。
@@ -354,7 +356,7 @@ extension MenuBarItemManager {
                 let current = itemCache[section]
                 let identifiers = Self.accessibilityProfileOrder(saved: saved, current: current.map(\.uniqueIdentifier))
                 let desired = identifiers.compactMap { id in current.first { $0.uniqueIdentifier == id } }
-                if !(await restoreAccessibilityOrder(desired, in: section)) { restored = false }
+                if await !restoreAccessibilityOrder(desired, in: section) { restored = false }
             }
             if !restored {
                 accessibilityLayoutError = "配置分区已恢复，但部分图标顺序未获系统确认。请展开项目后重新应用配置。"

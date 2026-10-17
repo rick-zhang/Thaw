@@ -1,9 +1,16 @@
+//
+//  AccessibilityMenuBarIdentity.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
 import Foundation
 
 extension AccessibilityMenuBarBackend {
     /// 对同一 AX 元素补全稳定身份，保留已经被设置引用的内部 tag。
     /// 枚举序号、标题和坐标均不作为跨扫描身份的证据。
-    nonisolated static func resolveIdentities(
+    static nonisolated func resolveIdentities(
         items: [Item], previous: [MenuBarItem], aliases: inout [String: String], unverifiedBundles: Set<String> = []
     ) -> [String: MenuBarItemTag] {
         func stableKey(_ item: Item) -> String? {
@@ -23,9 +30,9 @@ extension AccessibilityMenuBarBackend {
                 return ax.host.pid == item.host.pid && ax.host.bundleID == item.host.bundleID && ax.element == item.element
             }
             // 双向唯一才接受；同一个 AX 元素被重复枚举也不能合并两个项目。
-            let uniqueElement = items.filter {
+            let uniqueElement = items.count(where: {
                 $0.host.pid == item.host.pid && $0.element == item.element
-            }.count == 1
+            }) == 1
             var tag: MenuBarItemTag?
             if matches.count == 1, uniqueElement, let old = matches.first, let oldAX = old.accessibilityItem {
                 let oldKey = stableKey(oldAX)
@@ -34,16 +41,17 @@ extension AccessibilityMenuBarBackend {
                     aliases.contains { $0.key != newKey && $0.value == old.tag.persistenceKey }
                         || aliases[newKey].map { $0 != old.tag.persistenceKey } == true
                 } ?? false
-                if compatible && !conflictingAlias { tag = old.tag }
+                if compatible, !conflictingAlias { tag = old.tag }
             }
             if tag == nil, let uniqueKey,
                let encoded = aliases[uniqueKey], let stored = MenuBarItemTag(persistenceKey: encoded),
                stored.namespace == .string(namespace), !stored.title.isEmpty,
-               aliases.values.filter({ $0 == encoded }).count == 1 {
+               aliases.values.count(where: { $0 == encoded }) == 1
+            {
                 tag = stored
             }
             if tag == nil, let uniqueKey { tag = MenuBarItemTag(persistenceKey: uniqueKey) }
-            if tag == nil || used.contains(tag!.persistenceKey) {
+            if tag.map({ used.contains($0.persistenceKey) }) ?? true {
                 // UUID 只承担内部身份，不作为用户看到的名称；匿名项目跨进程不猜测关联。
                 tag = MenuBarItemTag(namespace: .string(namespace), title: "temporary-\(UUID().uuidString)")
             }

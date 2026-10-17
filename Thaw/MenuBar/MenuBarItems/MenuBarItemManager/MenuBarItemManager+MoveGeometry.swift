@@ -196,9 +196,15 @@ extension MenuBarItemManager {
 
     /// A nil endpoint display means parked off-screen; another display means a
     /// stale or cross-display plan, which is rejected.
+    /// - Parameter itemNeedsPointerTravel: Whether the item can only be moved by
+    ///   a gesture whose press lands inside the item itself and whose pointer
+    ///   actually travels. Control Center slots with no resolvable owner are
+    ///   such items: no process acknowledges a press aimed at the destination,
+    ///   and a press released without travel is undone by macOS.
     static nonisolated func strictTransportDecision(
         faithfulDragEnabled: Bool,
         itemIsControlItem: Bool,
+        itemNeedsPointerTravel: Bool,
         sourceDisplayID: CGDirectDisplayID?,
         destinationDisplayID: CGDirectDisplayID?,
         selectedDisplayID: CGDirectDisplayID,
@@ -219,7 +225,13 @@ extension MenuBarItemManager {
         case .crossesNotch:
             .use(.crossNotchTeleport)
         case .sameSafeSegment:
-            .use(faithfulDragEnabled && !itemIsControlItem ? .faithfulDrag : .teleport)
+            // A teleport stamps its press at the destination and posts no
+            // mouseDragged step at all, so it neither presses inside the item
+            // nor moves the pointer. Both are required for this class of item:
+            // the press must land inside the item's own bounds, and macOS only
+            // keeps the result once the pointer has travelled, so the gesture
+            // is forced here regardless of the faithful-drag setting.
+            .use((faithfulDragEnabled || itemNeedsPointerTravel) && !itemIsControlItem ? .faithfulDrag : .teleport)
         }
     }
 
@@ -521,6 +533,7 @@ extension MenuBarItemManager {
         return Self.strictTransportDecision(
             faithfulDragEnabled: faithfulDragMovesEnabled,
             itemIsControlItem: item.isControlItem,
+            itemNeedsPointerTravel: item.immovabilityReason == .unresolvedControlCenterPlaceholder,
             sourceDisplayID: geometry.source == .selectedDisplay ? displayID : nil,
             destinationDisplayID: geometry.target == .selectedDisplay ? displayID : nil,
             selectedDisplayID: displayID,

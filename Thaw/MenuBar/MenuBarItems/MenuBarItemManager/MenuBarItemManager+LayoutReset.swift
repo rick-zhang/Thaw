@@ -78,7 +78,8 @@ extension MenuBarItemManager {
             case .alwaysHidden: .alwaysHidden
             }
             var assignments = Self.accessibilityResetAssignments(
-                existing: accessibilityAssignments, section: section,
+                existing: accessibilityAssignments,
+                section: section,
                 ownBundle: Bundle.main.bundleIdentifier
             )
             for item in itemCache.managedItems where item.isMovable && item.canBeHidden && !item.isControlItem {
@@ -167,7 +168,7 @@ extension MenuBarItemManager {
     }
 
     /// 重置也覆盖暂未运行的已分区应用，避免它们重启后回到旧区域。
-    nonisolated static func accessibilityResetAssignments(
+    static nonisolated func accessibilityResetAssignments(
         existing: [String: String], section: MenuBarSection.Name, ownBundle: String?
     ) -> [String: String] {
         existing.mapValues { _ in section.rawValue }.filter {

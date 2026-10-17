@@ -14,7 +14,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     let tag: MenuBarItemTag
 
     /// AX 项目使用 kCGNullWindowID，并通过独立后端操作。
-    var accessibilityItem: AccessibilityMenuBarBackend.Item? = nil
+    var accessibilityItem: AccessibilityMenuBarBackend.Item?
 
     var presentationID: String {
         accessibilityItem.map { "ax:\($0.host.pid):\(tag.persistenceKey)" } ?? "window:\(windowID)"

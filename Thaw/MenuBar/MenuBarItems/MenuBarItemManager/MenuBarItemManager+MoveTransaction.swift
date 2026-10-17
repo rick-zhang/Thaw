@@ -301,6 +301,10 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug(
                 "Attempt \(attempt) failed: \(error.map { "\($0)" } ?? "unknown error")"
             )
+        case .ownerCannotBeAddressed:
+            MenuBarItemManager.diagLog.warning(
+                "Attempt \(attempt): \(item.logString) has no owning app to address and its window host is silent; abandoning the move"
+            )
         case .itemGone:
             MenuBarItemManager.diagLog.warning("Attempt \(attempt): \(item.logString) no longer reports bounds")
         case .destinationGone:
@@ -646,7 +650,8 @@ extension MenuBarItemManager {
             maxAttempts: max(1, options.maxMoveAttempts),
             displayWidth: CGDisplayBounds(resolvedDisplayID).width,
             itemIsControlItem: item.isControlItem,
-            ownerHasSilentRecord: failureLedger.isUnresponsive(item)
+            ownerHasSilentRecord: failureLedger.isUnresponsive(item),
+            itemOwnerIsUnattributable: item.immovabilityReason == .unresolvedControlCenterPlaceholder
         )
         var lastError: (any Error)?
         var stopReason: MovePolicy.StopReason?
@@ -691,7 +696,13 @@ extension MenuBarItemManager {
                     on: resolvedDisplayID,
                     budget: budget,
                     warpCursorAfter: false,
+                    // A silent unattributable item buys the one press aimed at
+                    // the item itself, which is the only press that reaches it
+                    // (#722). An on-screen destination already forces a real
+                    // drag, so this covers the parked endpoint, where the release
+                    // has to stay on its planned off-screen point.
                     preferSourceAnchoredTeleport: policyState.revertedRun > 0
+                        || policyState.unattributableSilentRun > 0
                 )
                 attemptStrategy = outcome.strategy
                 try await waitForLayoutToSettle(

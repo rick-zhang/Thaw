@@ -49,7 +49,9 @@ struct IceForm<Content: View>: View {
 
     /// 原生表单会按理想宽度收窄内容，显式提供随窗口收缩的最小宽度。
     private var contentWidth: CGFloat {
-        max(0, min(SettingsDetailLayout.columnMaxWidth,
-                   formWidth - SettingsDetailLayout.titleHorizontalInset * 2))
+        max(0, min(
+            SettingsDetailLayout.columnMaxWidth,
+            formWidth - SettingsDetailLayout.titleHorizontalInset * 2
+        ))
     }
 }

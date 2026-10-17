@@ -339,7 +339,7 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     var itemHotkeys: [String: Data]?
 
     /// macOS 27 按应用保存分区；可选字段保证旧配置仍可解码。
-    var macOS27Assignments: [String: String]? = nil
+    var macOS27Assignments: [String: String]?
 
     /// Resolves the ordering representation used by the layout apply path.
     /// Profiles written before `itemOrder` was added contain the equivalent

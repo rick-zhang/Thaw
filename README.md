@@ -11,15 +11,21 @@
 </p>
 
 <p align="center">
-  <b>The open source menu bar manager.</b>
+  <b>The open source menu bar manager for macOS.</b><br />
+  Take back your menu bar. Hide what you don't need, and find anything in a keystroke.
 </p>
 
 <p align="center">
-  <a href="https://github.com/thaw-app/Thaw/releases">Download</a> ·
+  <a href="https://www.getthaw.app"><b>getthaw.app</b></a> ·
   <a href="#install">Install</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#integrations">Integrations</a> ·
-  <a href=".github/CONTRIBUTING.md">Contributing</a>
+  <a href="https://www.getthaw.app/docs/thaw">Docs</a> ·
+  <a href="https://www.getthaw.app/changelog">Changelog</a> ·
+  <a href="https://www.getthaw.app/roadmap">Roadmap</a> ·
+  <a href="https://www.getthaw.app/community">Community</a>
+</p>
+
+<p align="center">
+  <a href="https://www.getthaw.app/#try">Try Thaw in your browser</a> before you install it.
 </p>
 
 <p align="center">
@@ -177,7 +183,9 @@ Every core action is a `thaw://` deep link, so Thaw plugs into the launcher you 
 
 - [Raycast](https://www.raycast.com/diazdesandi/thaw): official extension. Toggle sections, open search, and change settings without leaving Raycast.
 - [Droppy](https://getdroppy.app/): pair Thaw with Droppy's shelf and extras for a full menu bar suite.
+- [Floe](https://www.getthaw.app/docs/floe): the launcher from the same team. It opens menu bar items and applies profiles with no setup.
 - Anything else: Alfred, Shortcuts, Keyboard Maestro, BetterTouchTool, or a shell script.
+- Shortcuts, Spotlight and Siri: Thaw 3 has its own actions, and Siri phrases that need no setup. See [Shortcuts and automation](docs/SHORTCUTS.md).
 
 ```sh
 open "thaw://toggle-hidden"
@@ -189,14 +197,17 @@ Full reference, including reading and writing settings: [docs/URI_SCHEMES.md](do
 
 ## Install
 
-```sh
-brew install thaw        # stable
-brew install thaw@beta   # beta, or stable if it is newer
-```
+Choose the option for your macOS: a Homebrew command to run in Terminal, or a download.
 
-Or grab the `.dmg` from the [latest release](https://github.com/thaw-app/Thaw/releases/latest) and drag Thaw to Applications.
+| Your Mac runs | Run this | You get |
+|---|---|---|
+| macOS 27 | `brew install thaw@beta` | Thaw 3, in beta |
+| macOS 26 | `brew install thaw` | Thaw 2, the stable release |
+| macOS 14 or 15 | Download from the [releases](https://github.com/thaw-app/Thaw/releases) | Thaw 1 |
 
-Needs macOS 26+. Thaw asks for Accessibility on first launch to move menu bar items; Screen Recording is optional. Stuck? See [Frequent issues](FREQUENT_ISSUES.md).
+No Homebrew? Download the disk image for your macOS from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
+
+Thaw asks for Accessibility on first launch to move menu bar items. On macOS 27 it also asks for Menu Bar Layout Access, which lets it read the one file where macOS keeps the menu bar's order. Screen Recording is optional. [Getting started](docs/GETTING_STARTED.md) walks through the first run, and [Frequent issues](FREQUENT_ISSUES.md) covers what goes wrong.
 
 ## Languages
 
@@ -243,7 +254,7 @@ Missing yours, or spotted something off? [Translate Thaw on Crowdin](https://cro
 
 This project exists thanks to the people who contribute code and documentation. Translations happen on Crowdin rather than in git, so translators are credited separately in [Credits](CREDITS.md).
 
-Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see [Contributing](.github/CONTRIBUTING.md)).
+Want to contribute? Start with [Ways to contribute](https://github.com/thaw-app/Thaw/issues/316). Pull requests are welcome against the `development` branch (see the shared [Thaw/Floe contribution policy](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)).
 
 Open to partnerships, integrations, and sponsorships. [Get in touch](https://github.com/sponsors/stonerl).
 
@@ -253,10 +264,21 @@ Open to partnerships, integrations, and sponsorships. [Get in touch](https://git
 
 ## Project documentation
 
-- [Contributing](.github/CONTRIBUTING.md)
+The docs are easiest to read at [getthaw.app/docs](https://www.getthaw.app/docs/thaw), which is built from the files below. Start with [Getting started](https://www.getthaw.app/docs/thaw/getting-started), and see [Frequent issues](https://www.getthaw.app/docs/thaw/frequent-issues) if something looks wrong.
+
+- [Changelog](https://www.getthaw.app/changelog), and [what is planned](https://www.getthaw.app/roadmap)
+- [Getting started](docs/GETTING_STARTED.md)
+- [Versions and update channels](docs/VERSIONS.md)
+- [Permissions](docs/PERMISSIONS.md)
+- [What Thaw sends over the network](docs/NETWORK.md)
+- [Shortcuts and automation](docs/SHORTCUTS.md)
+- [Reset or uninstall](docs/RESET_AND_UNINSTALL.md)
+- [Frequent issues](FREQUENT_ISSUES.md)
+- [Contributing](https://github.com/thaw-app/.github/blob/main/.github/CONTRIBUTING.md)
+- [Development](docs/DEVELOPMENT.md)
 - [Credits](CREDITS.md)
 - [Governance](.github/GOVERNANCE.md)
-- [Security policy](.github/SECURITY.md)
+- [Security policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Assurance case](docs/ASSURANCE_CASE.md)

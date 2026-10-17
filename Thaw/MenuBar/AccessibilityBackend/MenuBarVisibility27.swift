@@ -28,15 +28,20 @@ final class MenuBarVisibility27 {
         pendingAllowed = nil
         let callbacks = completions
         completions.removeAll()
-        for callback in callbacks { callback(error) }
+        for callback in callbacks {
+            callback(error)
+        }
     }
 
     private func cancelPending() {
         generation += 1
         pendingAssertion?.invalidate()
         pendingAssertion = nil
-        completePending(NSError(domain: "Thaw.MenuBar27", code: 2,
-                                userInfo: [NSLocalizedDescriptionKey: "菜单栏请求已被后续操作替代。请重试。"]))
+        completePending(NSError(
+            domain: "Thaw.MenuBar27",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "菜单栏请求已被后续操作替代。请重试。"]
+        ))
     }
 
     enum Failure: LocalizedError {
@@ -77,8 +82,10 @@ final class MenuBarVisibility27 {
 
     /// 旧配置按项目记录分区；同一应用存在冲突时采用更严格的隐藏分区。
     static nonisolated func profileAssignments(
-        explicit: [String: String]?, itemSections: [String: String],
-        pinnedHidden: Set<String>, pinnedAlwaysHidden: Set<String>
+        explicit: [String: String]?,
+        itemSections: [String: String],
+        pinnedHidden: Set<String>,
+        pinnedAlwaysHidden: Set<String>
     ) -> [String: String] {
         let priority = ["visible": 0, "hidden": 1, "alwaysHidden": 2]
         var result = explicit ?? [:]
@@ -90,8 +97,12 @@ final class MenuBarVisibility27 {
                     result[bundle] = section
                 }
             }
-            for bundle in pinnedHidden where result[bundle] != "alwaysHidden" { result[bundle] = "hidden" }
-            for bundle in pinnedAlwaysHidden { result[bundle] = "alwaysHidden" }
+            for bundle in pinnedHidden where result[bundle] != "alwaysHidden" {
+                result[bundle] = "hidden"
+            }
+            for bundle in pinnedAlwaysHidden {
+                result[bundle] = "alwaysHidden"
+            }
         }
         return result.filter { bundle, section in
             !bundle.isEmpty && !bundle.hasPrefix("com.apple.") && bundle != "com.stonerl.Thaw" && priority[section] != nil
@@ -132,8 +143,11 @@ final class MenuBarVisibility27 {
               configurationType.instancesRespond(to: initializer)
         else { completion(Failure.unavailable); return }
         guard let allocated = (configurationType as AnyObject).perform(NSSelectorFromString("alloc"))?.takeUnretainedValue(),
-              let configuration = allocated.perform(initializer, with: (0..<64).map(NSNumber.init(value:)) as NSArray,
-                                                    with: Array(next) as NSArray)?.takeRetainedValue()
+              let configuration = allocated.perform(
+                  initializer,
+                  with: (0 ..< 64).map(NSNumber.init(value:)) as NSArray,
+                  with: Array(next) as NSArray
+              )?.takeRetainedValue()
         else { completion(Failure.configuration); return }
         cancelPending()
         pendingAllowed = next

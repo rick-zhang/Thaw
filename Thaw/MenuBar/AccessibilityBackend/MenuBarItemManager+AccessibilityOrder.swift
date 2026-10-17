@@ -41,18 +41,19 @@ extension MenuBarItemManager {
             let resolved = desired.filter { $0.accessibilityItem.map { live[$0.id] != nil } == true }
             guard resolved.count > 1 else { throw EventError.cannotComplete }
             let current = resolved.sorted {
-                (live[$0.accessibilityItem!.id]?.minX ?? 0) < (live[$1.accessibilityItem!.id]?.minX ?? 0)
+                ($0.accessibilityItem.flatMap { live[$0.id] }?.minX ?? 0) < ($1.accessibilityItem.flatMap { live[$0.id] }?.minX ?? 0)
             }
             if current.map(\.uniqueIdentifier) == resolved.map(\.uniqueIdentifier) {
                 // 已经满足目标顺序，不再发送拖动事件。
             } else if let item, item.isMovable,
-               let destination = Self.accessibilitySingleMoveDestination(
-                   current: current.map(\.uniqueIdentifier), desired: resolved.map(\.uniqueIdentifier), moving: item.uniqueIdentifier
-               ), let target = resolved.first(where: { $0.uniqueIdentifier == destination.anchor }) {
+                      let destination = Self.accessibilitySingleMoveDestination(
+                          current: current.map(\.uniqueIdentifier), desired: resolved.map(\.uniqueIdentifier), moving: item.uniqueIdentifier
+                      ), let target = resolved.first(where: { $0.uniqueIdentifier == destination.anchor })
+            {
                 // 单项拖放只移动被拖动项；其他成员顺序不匹配时保留整区恢复路径。
                 try await placeAccessibilityItemQuickly(item, beside: target, before: destination.before)
             } else {
-                for index in 1..<resolved.count {
+                for index in 1 ..< resolved.count {
                     try Task.checkCancellation()
                     let item = resolved[index]
                     let target = resolved[index - 1]
@@ -66,7 +67,8 @@ extension MenuBarItemManager {
             let confirmed = await AccessibilityMenuBarBackend.frames(for: itemCache.managedItems.compactMap(\.accessibilityItem), displayID: displayID)
             let orderedFrames = resolved.compactMap { $0.accessibilityItem.flatMap { confirmed[$0.id] } }
             guard orderedFrames.count == resolved.count,
-                  zip(orderedFrames, orderedFrames.dropFirst()).allSatisfy({ $0.minX < $1.minX && abs($0.midY - $1.midY) < 4 }) else {
+                  zip(orderedFrames, orderedFrames.dropFirst()).allSatisfy({ $0.minX < $1.minX && abs($0.midY - $1.midY) < 4 })
+            else {
                 throw EventError.cannotComplete
             }
             succeeded = resolved.count == desired.count
@@ -91,7 +93,7 @@ extension MenuBarItemManager {
     }
 
     /// 只有其余项目的相对顺序一致时，才可用一次拖动完成目标顺序。
-    nonisolated static func accessibilitySingleMoveDestination(
+    static nonisolated func accessibilitySingleMoveDestination(
         current: [String], desired: [String], moving: String
     ) -> (anchor: String, before: Bool)? {
         guard desired.count > 1, Set(desired).count == desired.count,
@@ -102,7 +104,7 @@ extension MenuBarItemManager {
     }
 
     /// 将配置中的稳定标识映射到当前项目，未记录的新项目保持原有相对顺序。
-    nonisolated static func accessibilityProfileOrder(saved: [String], current: [String]) -> [String] {
+    static nonisolated func accessibilityProfileOrder(saved: [String], current: [String]) -> [String] {
         let available = Set(current)
         var seen = Set<String>()
         let matched = saved.filter { available.contains($0) && seen.insert($0).inserted }
@@ -144,7 +146,7 @@ extension MenuBarItemManager {
         }
     }
 
-    nonisolated static func accessibilityHiddenItemPrecedesVisible(_ hidden: CGRect, _ visible: CGRect) -> Bool {
+    static nonisolated func accessibilityHiddenItemPrecedesVisible(_ hidden: CGRect, _ visible: CGRect) -> Bool {
         AccessibilityMenuBarBackend.isValidFrame(hidden) && AccessibilityMenuBarBackend.isValidFrame(visible)
             && abs(hidden.midY - visible.midY) < 4 && hidden.maxX <= visible.minX + 1
     }
@@ -156,7 +158,7 @@ extension MenuBarItemManager {
               order.indices.contains(index + offset), order[index + offset].isMovable else { return }
         order.swapAt(index, index + offset)
         let lower = min(index, index + offset)
-        reorderAccessibilityItems(Array(order[lower...(lower + 1)]), in: section, moving: item)
+        reorderAccessibilityItems(Array(order[lower ... (lower + 1)]), in: section, moving: item)
     }
 
     func commandDragAccessibilityItem(_ item: MenuBarItem, after target: MenuBarItem, before: Bool = false, rapid: Bool = false) async throws {
@@ -191,14 +193,14 @@ extension MenuBarItemManager {
         post(.leftMouseDown, start)
         try await Task.sleep(for: .milliseconds(60))
         let steps = rapid ? 8 : 24
-        for step in 1...steps {
+        for step in 1 ... steps {
             let progress = CGFloat(step) / CGFloat(steps)
             post(.leftMouseDragged, CGPoint(x: start.x + (end.x - start.x) * progress, y: start.y + (end.y - start.y) * progress))
             try await Task.sleep(for: .milliseconds(rapid ? 12 : 16))
         }
         post(.leftMouseUp, end)
         dropped = true
-        for _ in 0..<5 {
+        for _ in 0 ..< 5 {
             try await Task.sleep(for: .milliseconds(150))
             let fresh = await AccessibilityMenuBarBackend.frames(for: elements, displayID: displayID)
             if Self.accessibilityOrderIsAdjacent(frames: fresh, item: before ? anchor.id : ax.id, after: before ? ax.id : anchor.id) { return }
@@ -206,7 +208,7 @@ extension MenuBarItemManager {
         throw EventError.cannotComplete
     }
 
-    nonisolated static func accessibilityOrderIsAdjacent(frames: [String: CGRect], item: String, after anchor: String) -> Bool {
+    static nonisolated func accessibilityOrderIsAdjacent(frames: [String: CGRect], item: String, after anchor: String) -> Bool {
         guard let from = frames[item], let to = frames[anchor], from.minX >= to.maxX - 1,
               abs(from.midY - to.midY) < 4 else { return false }
         return !frames.contains { key, frame in

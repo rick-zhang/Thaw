@@ -1,3 +1,10 @@
+//
+//  MenuBarItemManager+AccessibilityNewItems.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
 import AppKit
 
 extension MenuBarItemManager {
@@ -101,7 +108,7 @@ extension MenuBarItemManager {
     }
 
     /// 锚点消失时使用该区域的默认边缘；返回的方向与布局中的标记位置一致。
-    nonisolated static func accessibilityNewItemAnchor(
+    static nonisolated func accessibilityNewItemAnchor(
         placement: NewItemsPlacement, identifiers: [String], hiddenSectionStartsOnLeft: Bool
     ) -> (identifier: String, before: Bool)? {
         if let anchor = placement.anchorIdentifier, identifiers.contains(anchor), placement.relation != .sectionDefault {
@@ -166,9 +173,10 @@ extension MenuBarItemManager {
                         && accessibilityPendingNewItems[$0.uniqueIdentifier] == nil
                         && (accessibilityAssignments[$0.accessibilityItem?.host.bundleID ?? ""] ?? "visible") == section.rawValue
                         && $0.accessibilityItem.flatMap { frames[$0.id] } != nil
-                }.sorted { frames[$0.accessibilityItem!.id]!.minX < frames[$1.accessibilityItem!.id]!.minX }
+                }.sorted { ($0.accessibilityItem.flatMap { frames[$0.id] }?.minX ?? 0) < ($1.accessibilityItem.flatMap { frames[$0.id] }?.minX ?? 0) }
                 let destination = Self.accessibilityNewItemAnchor(
-                    placement: placement, identifiers: peers.map(\.uniqueIdentifier),
+                    placement: placement,
+                    identifiers: peers.map(\.uniqueIdentifier),
                     hiddenSectionStartsOnLeft: appState?.settings.advanced.enableAlwaysHiddenSection == true
                 )
                 do {
@@ -178,7 +186,8 @@ extension MenuBarItemManager {
                               let target = all.filter({
                                   (accessibilityAssignments[$0.accessibilityItem?.host.bundleID ?? ""] ?? "visible") == "visible"
                                       && $0.accessibilityItem.flatMap { frames[$0.id] } != nil
-                              }).min(by: { frames[$0.accessibilityItem!.id]!.minX < frames[$1.accessibilityItem!.id]!.minX }) {
+                              }).min(by: { ($0.accessibilityItem.flatMap { frames[$0.id] }?.minX ?? 0) < ($1.accessibilityItem.flatMap { frames[$0.id] }?.minX ?? 0) })
+                    {
                         // 空隐藏区域以显示区域左边缘为起点。
                         try await placeAccessibilityItemQuickly(item, beside: target, before: true)
                     }

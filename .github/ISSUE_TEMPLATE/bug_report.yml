@@ -9,6 +9,12 @@ body:
       value: |
         Check [Frequent Issues](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md) and search [open and closed issues](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue) first.
 
+        On Thaw 3.0 and macOS 27, read the [known macOS 27 limitations](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md#known-macos-27-limitations) too. Those don't need a report.
+
+        **Issues are English only.** Machine translation (AI or any other tool) is accepted.
+
+        Thaw is free and run by a small team with limited time, so reports with clear steps and logs are looked at first. Issues that lack the requested details, or get no reply after two follow-ups from us, are closed. Issues with no activity are marked stale after 10 days and closed after about 14. Reopen with the missing details at any time.
+
   - type: textarea
     id: description
     attributes:

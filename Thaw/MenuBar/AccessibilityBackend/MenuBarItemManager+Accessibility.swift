@@ -44,7 +44,8 @@ extension MenuBarItemManager {
         let activePIDs = Set(apps.map(\.processIdentifier))
         let detectedIDs = Set(snapshot.items.map(\.id))
         let concealed = MenuBarVisibility27.hiddenBundles(
-            assignments: accessibilityAssignments, expanded: accessibilityExpandedSections,
+            assignments: accessibilityAssignments,
+            expanded: accessibilityExpandedSections,
             alwaysHiddenEnabled: appState?.settings.advanced.enableAlwaysHiddenSection == true
         )
         let previousItems = Array(accessibilityKnownItems.values)
@@ -63,7 +64,9 @@ extension MenuBarItemManager {
         let hostedFrames = await AccessibilityMenuBarBackend.frames(for: snapshot.items, displayID: displayID)
         let oldAliases = accessibilityIdentityAliases
         let tags = AccessibilityMenuBarBackend.resolveIdentities(
-            items: snapshot.items, previous: previousItems, aliases: &accessibilityIdentityAliases,
+            items: snapshot.items,
+            previous: previousItems,
+            aliases: &accessibilityIdentityAliases,
             unverifiedBundles: Set(hosts.filter { !snapshot.completedHosts.contains($0.pid) }.compactMap(\.bundleID))
         )
         if accessibilityIdentityAliases != oldAliases {
@@ -86,7 +89,8 @@ extension MenuBarItemManager {
         if !accessibilityAssignmentInFlight {
             registerAccessibilityNewItems(
                 items: snapshot.items.compactMap { accessibilityKnownItems[$0.id] },
-                runningPIDs: activePIDs, completedPIDs: snapshot.completedHosts
+                runningPIDs: activePIDs,
+                completedPIDs: snapshot.completedHosts
             )
         }
         publishAccessibilityItems()

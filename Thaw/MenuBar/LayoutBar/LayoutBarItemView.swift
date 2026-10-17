@@ -179,14 +179,17 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             (String(localized: "向左移动"), #selector(stepAccessibilityItemLeft)),
             (String(localized: "向右移动"), #selector(stepAccessibilityItemRight)),
             (String(localized: "移至显示区域"), #selector(moveAccessibilityItemToVisible)),
-            (String(localized: "移至隐藏区域"), #selector(moveAccessibilityItemToHidden))
+            (String(localized: "移至隐藏区域"), #selector(moveAccessibilityItemToHidden)),
         ]
         for (title, action) in entries {
             menu.addItem(withTitle: title, action: action, keyEquivalent: "").target = self
         }
         if appState?.settings.advanced.enableAlwaysHiddenSection == true {
-            menu.addItem(withTitle: String(localized: "移至永久隐藏区域"),
-                         action: #selector(moveAccessibilityItemToAlwaysHidden), keyEquivalent: "").target = self
+            menu.addItem(
+                withTitle: String(localized: "移至永久隐藏区域"),
+                action: #selector(moveAccessibilityItemToAlwaysHidden),
+                keyEquivalent: ""
+            ).target = self
         }
         return menu
     }

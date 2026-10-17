@@ -79,6 +79,10 @@ extension MenuBarItemManager {
             case ownerAlwaysSilent
             /// Events timed out on the final attempt.
             case ownerSilent
+            /// The item names no owner of its own, so its events can only reach
+            /// the window's host, and the host answered neither the usual press
+            /// nor a press on the item itself. Nothing else can commit the drag.
+            case ownerCannotBeAddressed
             case itemGone
             case destinationGone
             /// The destination anchor no longer matches the plan (recycled
@@ -99,7 +103,8 @@ extension MenuBarItemManager {
             /// must be checked before reporting a failure.
             var deservesFinalLandingCheck: Bool {
                 switch self {
-                case .targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .overran, .budgetExhausted, .other:
+                case .targetMoved, .targetRetreating, .ownerAlwaysSilent, .ownerSilent, .ownerCannotBeAddressed,
+                     .overran, .budgetExhausted, .other:
                     true
                 case .refusedByMacOS, .ownerUnresponsive, .itemGone, .destinationGone, .staleDestination, .superseded, .unsafePath:
                     false
@@ -111,7 +116,7 @@ extension MenuBarItemManager {
             /// and a deadline overrun say nothing about the owner.
             var isFiledAgainstOwner: Bool {
                 switch self {
-                case .ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent:
+                case .ownerUnresponsive, .ownerAlwaysSilent, .ownerSilent, .ownerCannotBeAddressed:
                     true
                 case .refusedByMacOS, .targetMoved, .targetRetreating, .itemGone, .destinationGone, .staleDestination, .superseded, .overran, .unsafePath, .budgetExhausted, .other:
                     false
@@ -126,6 +131,7 @@ extension MenuBarItemManager {
                 case .ownerUnresponsive: "owner unresponsive"
                 case .ownerAlwaysSilent: "owner always silent"
                 case .ownerSilent: "owner silent"
+                case .ownerCannotBeAddressed: "no owner to address and host silent"
                 case .itemGone: "item gone"
                 case .destinationGone: "destination gone"
                 case .staleDestination: "stale destination"
@@ -151,6 +157,15 @@ extension MenuBarItemManager {
             /// Whether the failure ledger holds a standing unresponsive mark
             /// for the item's owner.
             var ownerHasSilentRecord: Bool
+            /// Whether the item names no owner of its own, so its events can
+            /// only be delivered to the process that owns its window. Set for
+            /// a Control Center generic slot with an unresolved source PID
+            /// (``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder``).
+            var itemOwnerIsUnattributable = false
+            /// Consecutive silences from an unattributable owner that stop the
+            /// move. Two: the second attempt is the source-anchored gesture,
+            /// and a host that ignores that too will ignore every repeat.
+            var unattributableSilenceRunLength = 2
             /// Consecutive reverted releases that prove a refusal.
             var revertRunLength = 2
             /// Consecutive same-direction target moves that prove a retreat.
@@ -163,6 +178,10 @@ extension MenuBarItemManager {
             var attempts = 0
             /// Consecutive attempts whose release put the item back at its start.
             var revertedRun = 0
+            /// Consecutive silences from an item that names no owner. A
+            /// destination-anchored press never reaches such an item, so the
+            /// first silence buys the source-anchored gesture (#722).
+            var unattributableSilentRun = 0
             /// Whether any attempt's events displaced the item at all.
             var anyEventsSucceeded = false
             /// The target's `minX` when the move was planned, then at the end
@@ -254,6 +273,18 @@ extension MenuBarItemManager {
                     // responds without landing still gets its full budget.
                     if configuration.ownerHasSilentRecord {
                         return .stop(.ownerAlwaysSilent)
+                    }
+                    // An item that names no owner is moved through its window's
+                    // host, and the usual press at the destination never reaches
+                    // it: nothing acknowledges, so nothing is learnt by
+                    // repeating it (#722). The one gesture left that addresses
+                    // the item itself is the source-anchored press, which the
+                    // caller switches to while this run is nonzero.
+                    if configuration.itemOwnerIsUnattributable {
+                        state.unattributableSilentRun += 1
+                        if state.unattributableSilentRun >= max(1, configuration.unattributableSilenceRunLength) {
+                            return .stop(.ownerCannotBeAddressed)
+                        }
                     }
                     return state.attempts < maxAttempts ? .retry : .stop(.ownerSilent)
                 case .other:
@@ -403,7 +434,7 @@ extension MenuBarItemManager {
             EventError.moveTimedOut(item)
         case .unsafePath:
             EventError.unsafeMovePath(item)
-        case .ownerAlwaysSilent, .ownerSilent, .other:
+        case .ownerAlwaysSilent, .ownerSilent, .ownerCannotBeAddressed, .other:
             (lastError as? EventError) ?? EventError.cannotComplete
         case .budgetExhausted:
             EventError.cannotComplete

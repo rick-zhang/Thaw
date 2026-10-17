@@ -18,7 +18,7 @@ nonisolated enum AccessibilityMenuBarBackend {
     struct Host: Sendable {
         let pid: pid_t
         let name: String
-        var bundleID: String? = nil
+        var bundleID: String?
     }
 
     struct Item: Identifiable, Sendable {
@@ -26,7 +26,7 @@ nonisolated enum AccessibilityMenuBarBackend {
         let id: String
         let host: Host
         let title: String
-        var identifier: String? = nil
+        var identifier: String?
         let frame: CGRect
         let element: UIElement
     }
@@ -95,11 +95,17 @@ nonisolated enum AccessibilityMenuBarBackend {
                         ?? nested.compactMap { (try? $0.attribute(.description)) as String? }.first
                     let title = AXHelpers.title(for: element).flatMap { $0.isEmpty ? nil : $0 } ?? description
                     snapshot.items.append(Item(
-                        id: "\(host.pid):\(index)", host: host,
-                        title: displayTitle(appName: host.name, title: title,
-                                            identifier: identifier, index: index),
+                        id: "\(host.pid):\(index)",
+                        host: host,
+                        title: displayTitle(
+                            appName: host.name,
+                            title: title,
+                            identifier: identifier,
+                            index: index
+                        ),
                         identifier: identifier,
-                        frame: frame, element: element
+                        frame: frame,
+                        element: element
                     ))
                 }
                 if completed { snapshot.completedHosts.insert(host.pid) }
@@ -167,7 +173,7 @@ nonisolated enum AccessibilityMenuBarBackend {
             }
             for item in candidates {
                 guard let identifier = item.identifier, !identifier.isEmpty,
-                      candidates.filter({ $0.identifier == identifier }).count == 1 else { continue }
+                      candidates.count(where: { $0.identifier == identifier }) == 1 else { continue }
                 let matches = hosted.filter { $0.identifier == identifier }
                 if matches.count == 1 { result[item.id] = matches[0].frame }
             }
