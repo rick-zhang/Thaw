@@ -2,7 +2,8 @@ schema_version: 1
 upstream:
   url: git@github.com:thaw-app/Thaw.git
   remote: upstream
-  branch: development
+  branch:
+
 downstream:
   url: git@github.com:rick-zhang/Thaw.git
   remote: origin
