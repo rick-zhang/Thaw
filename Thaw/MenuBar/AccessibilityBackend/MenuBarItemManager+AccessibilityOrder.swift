@@ -11,37 +11,56 @@ import AppKit
 extension MenuBarItemManager {
     /// 使用系统支持的 Command 拖动，不向 macOS 27 的空窗口编号投递事件。
     /// 时序参照上游 macos-27-preview.3 的 SyntheticMoveEngine。
-    func reorderAccessibilityItems(_ desired: [MenuBarItem], in section: MenuBarSection.Name) {
-        Task { await restoreAccessibilityOrder(desired, in: section) }
+    func reorderAccessibilityItems(_ desired: [MenuBarItem], in section: MenuBarSection.Name, moving item: MenuBarItem? = nil) {
+        Task { await restoreAccessibilityOrder(desired, in: section, moving: item) }
     }
 
     /// 等待实际排序完成，供配置恢复和手动排序共用；不保存未经系统确认的顺序。
     @discardableResult
-    func restoreAccessibilityOrder(_ desired: [MenuBarItem], in section: MenuBarSection.Name) async -> Bool {
+    func restoreAccessibilityOrder(_ desired: [MenuBarItem], in section: MenuBarSection.Name, moving item: MenuBarItem? = nil) async -> Bool {
         guard !accessibilityAssignmentInFlight,
               desired.allSatisfy({ itemCache.address(for: $0.tag)?.section == section }) else { return false }
         guard desired.count > 1 else { return true }
         accessibilityAssignmentInFlight = true
         cancelAccessibilityNewItems(for: Set(desired.compactMap { $0.accessibilityItem?.host.bundleID }))
         var succeeded = false
+        var releasedVisibility = false
         do {
             try await eventSemaphore.wait(timeout: .seconds(3))
             defer { Task { await eventSemaphore.signal() } }
-            accessibilityVisibility.release()
-            try await Task.sleep(for: .milliseconds(300))
             guard let displayID = Bridging.getActiveMenuBarDisplayID() else { throw EventError.cannotComplete }
-            let live = await AccessibilityMenuBarBackend.frames(for: itemCache.managedItems.compactMap(\.accessibilityItem), displayID: displayID)
+            var live = await AccessibilityMenuBarBackend.frames(for: itemCache.managedItems.compactMap(\.accessibilityItem), displayID: displayID)
+            // 只在目标项目无法直接定位时展开；可见区排序不扰动隐藏区。
+            if !desired.allSatisfy({ $0.accessibilityItem.map { live[$0.id] != nil } == true }) {
+                accessibilityVisibility.release()
+                releasedVisibility = true
+                try await Task.sleep(for: .milliseconds(300))
+                live = await AccessibilityMenuBarBackend.frames(for: itemCache.managedItems.compactMap(\.accessibilityItem), displayID: displayID)
+            }
             // 无法定位的项目留在原处，继续排序其余项目，但不能报告完整成功。
             let resolved = desired.filter { $0.accessibilityItem.map { live[$0.id] != nil } == true }
             guard resolved.count > 1 else { throw EventError.cannotComplete }
-            for index in 1..<resolved.count {
-                try Task.checkCancellation()
-                let item = resolved[index]
-                let target = resolved[index - 1]
-                if item.isMovable {
-                    try await commandDragAccessibilityItem(item, after: target)
-                } else if target.isMovable {
-                    try await commandDragAccessibilityItem(target, after: item, before: true)
+            let current = resolved.sorted {
+                (live[$0.accessibilityItem!.id]?.minX ?? 0) < (live[$1.accessibilityItem!.id]?.minX ?? 0)
+            }
+            if current.map(\.uniqueIdentifier) == resolved.map(\.uniqueIdentifier) {
+                // 已经满足目标顺序，不再发送拖动事件。
+            } else if let item, item.isMovable,
+               let destination = Self.accessibilitySingleMoveDestination(
+                   current: current.map(\.uniqueIdentifier), desired: resolved.map(\.uniqueIdentifier), moving: item.uniqueIdentifier
+               ), let target = resolved.first(where: { $0.uniqueIdentifier == destination.anchor }) {
+                // 单项拖放只移动被拖动项；其他成员顺序不匹配时保留整区恢复路径。
+                try await placeAccessibilityItemQuickly(item, beside: target, before: destination.before)
+            } else {
+                for index in 1..<resolved.count {
+                    try Task.checkCancellation()
+                    let item = resolved[index]
+                    let target = resolved[index - 1]
+                    if item.isMovable {
+                        try await placeAccessibilityItemQuickly(item, beside: target, before: false)
+                    } else if target.isMovable {
+                        try await placeAccessibilityItemQuickly(target, beside: item, before: true)
+                    }
                 }
             }
             let confirmed = await AccessibilityMenuBarBackend.frames(for: itemCache.managedItems.compactMap(\.accessibilityItem), displayID: displayID)
@@ -60,13 +79,26 @@ extension MenuBarItemManager {
         accessibilityAssignmentInFlight = false
         let orderError = accessibilityLayoutError
         // 等到隐藏状态恢复后再交给下一分区，避免多个排序事务交叉。
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            applyAccessibilityVisibility { [weak self] error in
-                if error == nil, self?.accessibilityLayoutError == nil { self?.accessibilityLayoutError = orderError }
-                continuation.resume()
+        if releasedVisibility {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                applyAccessibilityVisibility { [weak self] error in
+                    if error == nil, self?.accessibilityLayoutError == nil { self?.accessibilityLayoutError = orderError }
+                    continuation.resume()
+                }
             }
         }
         return succeeded
+    }
+
+    /// 只有其余项目的相对顺序一致时，才可用一次拖动完成目标顺序。
+    nonisolated static func accessibilitySingleMoveDestination(
+        current: [String], desired: [String], moving: String
+    ) -> (anchor: String, before: Bool)? {
+        guard desired.count > 1, Set(desired).count == desired.count,
+              current.count == desired.count, Set(current) == Set(desired),
+              current.filter({ $0 != moving }) == desired.filter({ $0 != moving }),
+              let index = desired.firstIndex(of: moving) else { return nil }
+        return index == 0 ? (desired[1], true) : (desired[index - 1], false)
     }
 
     /// 将配置中的稳定标识映射到当前项目，未记录的新项目保持原有相对顺序。
@@ -124,10 +156,10 @@ extension MenuBarItemManager {
               order.indices.contains(index + offset), order[index + offset].isMovable else { return }
         order.swapAt(index, index + offset)
         let lower = min(index, index + offset)
-        reorderAccessibilityItems(Array(order[lower...(lower + 1)]), in: section)
+        reorderAccessibilityItems(Array(order[lower...(lower + 1)]), in: section, moving: item)
     }
 
-    func commandDragAccessibilityItem(_ item: MenuBarItem, after target: MenuBarItem, before: Bool = false) async throws {
+    func commandDragAccessibilityItem(_ item: MenuBarItem, after target: MenuBarItem, before: Bool = false, rapid: Bool = false) async throws {
         guard let ax = item.accessibilityItem, let anchor = target.accessibilityItem else { throw EventError.cannotComplete }
         let strips = NSScreen.screens.map { screen in
             let frame = CGDisplayBounds(screen.displayID)
@@ -158,10 +190,11 @@ extension MenuBarItemManager {
         try await Task.sleep(for: .milliseconds(30))
         post(.leftMouseDown, start)
         try await Task.sleep(for: .milliseconds(60))
-        for step in 1...24 {
-            let progress = CGFloat(step) / 24
+        let steps = rapid ? 8 : 24
+        for step in 1...steps {
+            let progress = CGFloat(step) / CGFloat(steps)
             post(.leftMouseDragged, CGPoint(x: start.x + (end.x - start.x) * progress, y: start.y + (end.y - start.y) * progress))
-            try await Task.sleep(for: .milliseconds(16))
+            try await Task.sleep(for: .milliseconds(rapid ? 12 : 16))
         }
         post(.leftMouseUp, end)
         dropped = true

@@ -38,6 +38,7 @@ $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/NavigationIdentifier.swift
 $(SRCROOT)/Thaw/Main/Navigation/NavigationIdentifiers/SettingsNavigationIdentifier.swift
 $(SRCROOT)/Thaw/Main/Updates.swift
 $(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/AccessibilityMenuBarBackend.swift
+$(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/AccessibilityMenuBarIdentity.swift
 $(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemImageCache+Accessibility.swift
 $(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemManager+Accessibility.swift
 $(SRCROOT)/Thaw/MenuBar/AccessibilityBackend/MenuBarItemManager+AccessibilityNewItems.swift

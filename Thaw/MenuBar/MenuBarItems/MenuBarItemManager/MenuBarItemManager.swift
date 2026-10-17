@@ -39,9 +39,14 @@ final class MenuBarItemManager {
     var accessibilityKnownItems: [String: MenuBarItem] = [:]
     var accessibilityExpandedSections = Set<MenuBarSection.Name>()
     var accessibilityAssignments = Defaults.store.dictionary(forKey: "macOS27SectionAssignments") as? [String: String] ?? [:]
+    var accessibilityIdentityAliases = Defaults.store.dictionary(forKey: "macOS27IdentityAliases") as? [String: String] ?? [:]
     var accessibilitySeenItems = Set(Defaults.store.stringArray(forKey: "macOS27SeenItems") ?? [])
     var accessibilityNeedsBaseline = Defaults.store.object(forKey: "macOS27SeenItems") == nil
     var accessibilityBaselinePIDs = Set<pid_t>()
+    // 区分 Thaw 启动时已存在的应用与运行期间新启动的进程。
+    var accessibilityLaunchDiscoveryTasks = [pid_t: Task<Void, Never>]()
+    var accessibilityObservedPIDs: Set<pid_t>?
+    var accessibilityArrivingPIDs = Set<pid_t>()
     var accessibilityPendingNewItems = (Defaults.store.data(forKey: "macOS27PendingNewItems")
         .flatMap { try? JSONDecoder().decode([String: NewItemsPlacement].self, from: $0) }) ?? [:]
     var accessibilityNewItemsRetryAfter = Date.distantPast
@@ -281,6 +286,7 @@ final class MenuBarItemManager {
         menuOpenCheckTask?.cancel()
         navigationStateObservationTask?.cancel()
         groupOrderObservationTask?.cancel()
+        for task in accessibilityLaunchDiscoveryTasks.values { task.cancel() }
     }
 
     /// Continuations waiting for a background cache cycle to complete,
@@ -1842,6 +1848,16 @@ final class MenuBarItemManager {
                 guard !Task.isCancelled else { return }
                 await self.applyGroupOrderToLiveSections()
             }
+        }
+
+        // 新版先定向发现新进程，不等待旧版全量刷新的防抖窗口。
+        if AccessibilityMenuBarBackend.isRequired {
+            NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)
+                .sink { [weak self] notification in
+                    guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+                    self?.discoverAccessibilityItemsAfterLaunch(pid: app.processIdentifier)
+                }
+                .store(in: &c)
         }
 
         NSWorkspace.shared.notificationCenter.publisher(

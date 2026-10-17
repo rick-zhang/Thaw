@@ -176,7 +176,7 @@ final class LayoutBarPaddingView: NSView {
             let sourceContainer = draggingSource.oldContainerInfo?.container
             if let manager = container.appState?.itemManager {
                 if manager.itemCache.address(for: item.tag)?.section == container.section {
-                    manager.reorderAccessibilityItems(items(in: arrangedViews), in: container.section)
+                    manager.reorderAccessibilityItems(items(in: arrangedViews), in: container.section, moving: item)
                 } else {
                     manager.assignAccessibilityItem(item, to: container.section)
                 }

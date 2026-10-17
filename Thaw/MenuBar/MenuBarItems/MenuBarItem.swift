@@ -17,7 +17,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     var accessibilityItem: AccessibilityMenuBarBackend.Item? = nil
 
     var presentationID: String {
-        accessibilityItem.map { "ax:\($0.id)" } ?? "window:\(windowID)"
+        accessibilityItem.map { "ax:\($0.host.pid):\(tag.persistenceKey)" } ?? "window:\(windowID)"
     }
 
     let windowID: CGWindowID

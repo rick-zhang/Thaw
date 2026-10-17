@@ -26,15 +26,17 @@ extension MenuBarItemManager {
         return success
     }
 
-    func cacheAccessibilityItems() async {
+    func cacheAccessibilityItems(onlyPID: pid_t? = nil) async {
         guard NSClassFromString("XCTestCase") == nil, !accessibilityScanRunning, AXHelpers.isProcessTrusted() else { return }
         accessibilityScanRunning = true
         defer { accessibilityScanRunning = false }
-        accessibilityLastScan = Date()
+        if onlyPID == nil { accessibilityLastScan = Date() }
         let apps = NSWorkspace.shared.runningApplications.filter {
             !$0.isTerminated && $0.processIdentifier != ProcessInfo.processInfo.processIdentifier
         }
-        let hosts = apps.map {
+        // 同 bundle 的多个进程必须一起扫描，避免局部扫描把重复稳定标识当成唯一。
+        let selectedBundle = apps.first { $0.processIdentifier == onlyPID }?.bundleIdentifier
+        let hosts = apps.filter { onlyPID == nil || $0.processIdentifier == onlyPID || (selectedBundle != nil && $0.bundleIdentifier == selectedBundle) }.map {
             AccessibilityMenuBarBackend.Host(pid: $0.processIdentifier, name: $0.localizedName ?? "未知应用", bundleID: $0.bundleIdentifier)
         }
         let snapshot = await AccessibilityMenuBarBackend.scan(hosts: hosts)
@@ -45,6 +47,7 @@ extension MenuBarItemManager {
             assignments: accessibilityAssignments, expanded: accessibilityExpandedSections,
             alwaysHiddenEnabled: appState?.settings.advanced.enableAlwaysHiddenSection == true
         )
+        let previousItems = Array(accessibilityKnownItems.values)
         accessibilityKnownItems = accessibilityKnownItems.filter { id, item in
             guard activePIDs.contains(item.ownerPID) else { return false }
             // 完整扫描后删除已消失的可见项目；隐藏或扫描失败的应用保留旧项目以便恢复。
@@ -58,7 +61,14 @@ extension MenuBarItemManager {
         }
         let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         let hostedFrames = await AccessibilityMenuBarBackend.frames(for: snapshot.items, displayID: displayID)
-        let tags = AccessibilityMenuBarBackend.tags(for: snapshot.items)
+        let oldAliases = accessibilityIdentityAliases
+        let tags = AccessibilityMenuBarBackend.resolveIdentities(
+            items: snapshot.items, previous: previousItems, aliases: &accessibilityIdentityAliases,
+            unverifiedBundles: Set(hosts.filter { !snapshot.completedHosts.contains($0.pid) }.compactMap(\.bundleID))
+        )
+        if accessibilityIdentityAliases != oldAliases {
+            Defaults.store.set(accessibilityIdentityAliases, forKey: "macOS27IdentityAliases")
+        }
         for ax in snapshot.items {
             guard let tag = tags[ax.id] else { continue }
             let item = MenuBarItem(

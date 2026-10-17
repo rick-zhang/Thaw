@@ -57,22 +57,6 @@ nonisolated enum AccessibilityMenuBarBackend {
         isValidFrame(frame) && strips.contains { $0.contains(frame) }
     }
 
-    /// 同一应用可发布多个同名 AX 元素，不能让搜索和快捷键将它们合并。
-    static func tags(for items: [Item]) -> [String: MenuBarItemTag] {
-        var counts = [String: Int]()
-        var result = [String: MenuBarItemTag]()
-        for item in items {
-            let namespace = item.host.bundleID ?? "pid-\(item.host.pid)"
-            let title = item.identifier.flatMap { $0.isEmpty ? nil : $0 }
-                ?? "Item-\(item.id.split(separator: ":").last ?? "0")"
-            let key = "\(namespace):\(title)"
-            let index = counts[key, default: 0]
-            counts[key] = index + 1
-            result[item.id] = MenuBarItemTag(namespace: .string(namespace), title: title, instanceIndex: index)
-        }
-        return result
-    }
-
     static func scan(hosts: [Host]) async -> Snapshot {
         // AX 消息可能等待其他进程；显式移出主线程，并限制每个消息的等待时间。
         let work = Task.detached(priority: .utility) {

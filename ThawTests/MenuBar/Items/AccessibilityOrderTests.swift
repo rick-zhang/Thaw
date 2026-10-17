@@ -5,6 +5,19 @@ import Testing
 @testable import Thaw
 
 struct AccessibilityOrderTests {
+    @Test("单项排序只移动用户选中项，并保留其他成员顺序")
+    func singleMovePlan() {
+        let left = MenuBarItemManager.accessibilitySingleMoveDestination(current: ["a", "b", "c", "d"], desired: ["c", "a", "b", "d"], moving: "c")
+        #expect(left?.anchor == "a")
+        #expect(left?.before == true)
+        let right = MenuBarItemManager.accessibilitySingleMoveDestination(current: ["a", "b", "c", "d"], desired: ["a", "c", "d", "b"], moving: "b")
+        #expect(right?.anchor == "d")
+        #expect(right?.before == false)
+        #expect(MenuBarItemManager.accessibilitySingleMoveDestination(current: ["a", "b", "c"], desired: ["c", "b", "a"], moving: "b") == nil)
+        #expect(MenuBarItemManager.accessibilitySingleMoveDestination(current: ["a", "b"], desired: ["a", "a"], moving: "a") == nil)
+        #expect(MenuBarItemManager.accessibilitySingleMoveDestination(current: ["a", "b"], desired: ["a", "c"], moving: "a") == nil)
+    }
+
     @Test("隐藏区边界使用完整图标宽度，并拒绝跨屏坐标")
     func concealedItemsMustBeEntirelyToTheLeft() {
         let visible = CGRect(x: 200, y: -900, width: 24, height: 30)
